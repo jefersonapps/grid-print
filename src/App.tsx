@@ -47,6 +47,7 @@ function AppContent() {
     handleRemoveItem,
     handleClear,
     handleAddPage,
+    handleRemovePage,
     handleLayoutChange,
     handleItemStyleChange,
     handleImageUploadToEditor,
@@ -85,6 +86,9 @@ function AppContent() {
               onLayoutChange={handleLayoutChange}
               onClear={handleClear}
               onAddPage={handleAddPage}
+              onRemovePage={handleRemovePage}
+              selectedPageId={selectedPageId}
+              pageCount={pages.length}
               hasFiles={allItems.length > 0}
             />
           </div>

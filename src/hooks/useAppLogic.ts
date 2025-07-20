@@ -350,6 +350,42 @@ export const useAppLogic = () => {
     toast.success("Nova página adicionada!");
   }, []);
 
+  const handleRemovePage = useCallback(
+    (pageIdToRemove: string) => {
+      const pageToRemove = pages.find((p) => p.id === pageIdToRemove);
+      if (!pageToRemove) return;
+
+      // Limpa instâncias do editor para os itens da página removida
+      pageToRemove.items.forEach((item) => {
+        if (item.type === "text" && editorInstances.current[item.id]) {
+          const editor = editorInstances.current[item.id];
+          if (editor && !editor.isDestroyed) {
+            editor.destroy();
+          }
+          delete editorInstances.current[item.id];
+        }
+      });
+
+      const pageIndex = pages.findIndex((p) => p.id === pageIdToRemove);
+      const newPages = pages.filter((p) => p.id !== pageIdToRemove);
+
+      if (newPages.length === 0) {
+        // Se a última página foi removida, cria uma nova vazia para substituí-la
+        const newPageId = `page-${Date.now()}`;
+        setPages([{ id: newPageId, items: [] }]);
+        setSelectedPageId(newPageId);
+      } else {
+        // Seleciona a página anterior ou a primeira página
+        const newIndexToSelect = Math.max(0, pageIndex - 1);
+        setSelectedPageId(newPages[newIndexToSelect].id);
+        setPages(newPages);
+      }
+
+      toast.success("Página removida com sucesso!");
+    },
+    [pages]
+  );
+
   const handleLayoutChange = useCallback(
     (key: keyof Omit<LayoutConfig, "itemScale">, value: number | string) => {
       setLayout((prev) => ({ ...prev, [key]: value }));
@@ -579,6 +615,7 @@ export const useAppLogic = () => {
     handleRemoveItem,
     handleClear,
     handleAddPage,
+    handleRemovePage,
     handleLayoutChange,
     handleItemStyleChange,
     handleImageUploadToEditor,
