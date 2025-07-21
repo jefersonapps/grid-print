@@ -41,6 +41,7 @@ export const SortableItem = React.memo(
       borderRadius:
         item.type !== "text" ? `${item.style.borderRadius || 2}px` : "2px",
       overflow: item.type === "text" ? "visible" : "hidden",
+      opacity: isDragging ? 0 : 1,
     };
     const getTransformOrigin = () => {
       switch (item.style.alignItems) {

@@ -2,7 +2,6 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import { toast } from "sonner";
 import { getDocument, GlobalWorkerOptions } from "pdfjs-dist";
 import { Editor } from "@tiptap/react";
-import { arrayMove } from "@dnd-kit/sortable";
 import type { DragEndEvent } from "@dnd-kit/core";
 
 import { useMediaQuery } from "./useMediaQuery";
@@ -38,6 +37,7 @@ export const useAppLogic = () => {
   });
   const [isProcessing, setIsProcessing] = useState(false);
   const [previewZoom, setPreviewZoom] = useState(1);
+  const [activeDragItem, setActiveDragItem] = useState<GridItem | null>(null);
 
   const editorInstances: EditorInstancesRef = useRef({});
   const editorImageInputRef = useRef<HTMLInputElement>(null);
@@ -88,33 +88,110 @@ export const useAppLogic = () => {
     };
   }, []);
 
-  const handleDragEnd = (event: DragEndEvent) => {
+  const handleDragStart = useCallback(
+    (event: import("@dnd-kit/core").DragStartEvent) => {
+      const item = allItems.find((i) => i.id === event.active.id);
+      if (item) {
+        setActiveDragItem(item);
+      }
+    },
+    [allItems]
+  );
+
+  const handleDragCancel = () => {
+    setActiveDragItem(null);
+  };
+
+  const handleDragOver = (event: import("@dnd-kit/core").DragOverEvent) => {
     const { active, over } = event;
-    if (over && active.id !== over.id) {
-      setPages((currentPages) => {
-        const activePage = currentPages.find((p) =>
-          p.items.some((i) => i.id === active.id)
-        );
-        const overPage = currentPages.find((p) =>
-          p.items.some((i) => i.id === over.id)
-        );
 
-        if (activePage && overPage && activePage.id === overPage.id) {
-          const oldIndex = activePage.items.findIndex(
-            (i) => i.id === active.id
-          );
-          const newIndex = overPage.items.findIndex((i) => i.id === over.id);
+    if (
+      !over ||
+      active.id === over.id ||
+      over.id.toString().startsWith("placeholder")
+    ) {
+      return;
+    }
 
-          const reorderedItems = arrayMove(
-            activePage.items,
-            oldIndex,
-            newIndex
-          );
-          return currentPages.map((p) =>
-            p.id === activePage.id ? { ...p, items: reorderedItems } : p
-          );
-        }
+    setPages((currentPages) => {
+      const activePageIndex = currentPages.findIndex((p) =>
+        p.items.some((item) => item.id === active.id)
+      );
+      const activeItemIndex = currentPages[activePageIndex]?.items.findIndex(
+        (item) => item.id === active.id
+      );
+
+      const overPageIndex = currentPages.findIndex((p) =>
+        p.items.some((item) => item.id === over.id)
+      );
+      const overItemIndex = currentPages[overPageIndex]?.items.findIndex(
+        (item) => item.id === over.id
+      );
+
+      if (
+        activePageIndex === -1 ||
+        overPageIndex === -1 ||
+        activeItemIndex === undefined ||
+        overItemIndex === undefined
+      ) {
         return currentPages;
+      }
+
+      if (
+        currentPages[activePageIndex].items[activeItemIndex]?.id ===
+        currentPages[overPageIndex].items[overItemIndex]?.id
+      ) {
+        return currentPages;
+      }
+
+      const newPages = JSON.parse(JSON.stringify(currentPages));
+
+      if (activePageIndex === overPageIndex) {
+        const items = newPages[activePageIndex].items;
+        [items[activeItemIndex], items[overItemIndex]] = [
+          items[overItemIndex],
+          items[activeItemIndex],
+        ];
+      } else {
+        const activePageItems = newPages[activePageIndex].items;
+        const overPageItems = newPages[overPageIndex].items;
+        [activePageItems[activeItemIndex], overPageItems[overItemIndex]] = [
+          overPageItems[overItemIndex],
+          activePageItems[activeItemIndex],
+        ];
+      }
+
+      return newPages;
+    });
+  };
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { over } = event;
+
+    if (over && over.id.toString().startsWith("placeholder")) {
+      const { active } = event;
+
+      setPages((currentPages) => {
+        const newPages: Page[] = JSON.parse(JSON.stringify(currentPages));
+
+        const activePageIndex = newPages.findIndex((p) =>
+          p.items.some((item) => item.id === active.id)
+        );
+        if (activePageIndex === -1) return newPages;
+        const activeItemIndex = newPages[activePageIndex].items.findIndex(
+          (item) => item.id === active.id
+        );
+        const [movedItem] = newPages[activePageIndex].items.splice(
+          activeItemIndex,
+          1
+        );
+
+        const [, pageId, indexStr] = over.id.toString().split("-");
+        const overPageIndex = newPages.findIndex((p) => p.id === pageId);
+        const overItemIndex = parseInt(indexStr, 10);
+        newPages[overPageIndex].items.splice(overItemIndex, 0, movedItem);
+
+        return newPages;
       });
     }
   };
@@ -355,7 +432,6 @@ export const useAppLogic = () => {
       const pageToRemove = pages.find((p) => p.id === pageIdToRemove);
       if (!pageToRemove) return;
 
-      // Limpa instâncias do editor para os itens da página removida
       pageToRemove.items.forEach((item) => {
         if (item.type === "text" && editorInstances.current[item.id]) {
           const editor = editorInstances.current[item.id];
@@ -370,12 +446,10 @@ export const useAppLogic = () => {
       const newPages = pages.filter((p) => p.id !== pageIdToRemove);
 
       if (newPages.length === 0) {
-        // Se a última página foi removida, cria uma nova vazia para substituí-la
         const newPageId = `page-${Date.now()}`;
         setPages([{ id: newPageId, items: [] }]);
         setSelectedPageId(newPageId);
       } else {
-        // Seleciona a página anterior ou a primeira página
         const newIndexToSelect = Math.max(0, pageIndex - 1);
         setSelectedPageId(newPages[newIndexToSelect].id);
         setPages(newPages);
@@ -514,7 +588,7 @@ export const useAppLogic = () => {
         .join("");
 
       const printPageStructureCSS = `<style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap');
+        @import url('https:
         @page {
           size: A4 ${layout.orientation};
           margin: 0 !important;
@@ -608,6 +682,10 @@ export const useAppLogic = () => {
     pageViewportRef,
     allItems,
     selectedItem,
+    activeDragItem,
+    handleDragStart,
+    handleDragCancel,
+    handleDragOver,
     handleDragEnd,
     handleFileProcessing,
     handleAddTextBlock,

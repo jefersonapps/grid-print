@@ -1,12 +1,12 @@
 import "./editor.css";
 import {
   DndContext,
-  closestCenter,
   PointerSensor,
   useSensor,
   useSensors,
+  DragOverlay,
+  closestCenter,
 } from "@dnd-kit/core";
-import { SortableContext, rectSwappingStrategy } from "@dnd-kit/sortable";
 import { Toaster } from "sonner";
 
 import { useAppLogic } from "./hooks/useAppLogic";
@@ -40,6 +40,10 @@ function AppContent() {
     pageViewportRef,
     allItems,
     selectedItem,
+    activeDragItem,
+    handleDragStart,
+    handleDragOver,
+    handleDragCancel,
     handleDragEnd,
     handleFileProcessing,
     handleAddTextBlock,
@@ -63,7 +67,13 @@ function AppContent() {
     <DndContext
       sensors={sensors}
       collisionDetection={closestCenter}
-      onDragEnd={handleDragEnd}
+      onDragStart={handleDragStart}
+      onDragOver={handleDragOver}
+      onDragEnd={(event) => {
+        handleDragEnd(event);
+        handleDragCancel();
+      }}
+      onDragCancel={handleDragCancel}
     >
       <input
         type="file"
@@ -112,31 +122,18 @@ function AppContent() {
                   {pages.map((page) => (
                     <PrintablePage
                       key={page.id}
+                      pageId={page.id}
+                      items={page.items}
                       layout={layout}
                       zoom={previewZoom}
                       isSelected={page.id === selectedPageId}
                       onSelect={() => setSelectedPageId(page.id)}
-                    >
-                      <SortableContext
-                        items={page.items.map((f) => f.id)}
-                        strategy={rectSwappingStrategy}
-                      >
-                        {page.items.map((item) => (
-                          <SortableItem
-                            key={item.id}
-                            item={item}
-                            editor={
-                              item.type === "text"
-                                ? editorInstances.current[item.id]
-                                : null
-                            }
-                            onSelect={handleSelect}
-                            isSelected={item.id === selectedItemId}
-                            onRemove={handleRemoveItem}
-                          />
-                        ))}
-                      </SortableContext>
-                    </PrintablePage>
+                      editorInstances={editorInstances}
+                      selectedItemId={selectedItemId}
+                      onItemSelect={handleSelect}
+                      onItemRemove={handleRemoveItem}
+                      activeDragItemId={activeDragItem?.id || null}
+                    />
                   ))}
                 </div>
               </div>
@@ -154,6 +151,22 @@ function AppContent() {
           onClose={() => handleSelect("")}
         />
       </div>
+
+      <DragOverlay>
+        {activeDragItem ? (
+          <SortableItem
+            item={activeDragItem}
+            editor={
+              activeDragItem.type === "text"
+                ? editorInstances.current[activeDragItem.id]
+                : null
+            }
+            isSelected={true}
+            onSelect={() => {}}
+            onRemove={() => {}}
+          />
+        ) : null}
+      </DragOverlay>
     </DndContext>
   );
 }

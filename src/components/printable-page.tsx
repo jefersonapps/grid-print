@@ -1,21 +1,45 @@
 import React from "react";
 import { cn } from "@/lib/utils";
-import type { LayoutConfig } from "@/types";
+import type { LayoutConfig, GridItem } from "@/types";
+import { SortableContext, rectSwappingStrategy } from "@dnd-kit/sortable";
+
+import type { Editor } from "@tiptap/react";
+import { SortableItem } from "./sortable-item";
 
 interface PrintablePageProps {
-  children: React.ReactNode;
+  pageId: string;
+  items: GridItem[];
   layout: LayoutConfig;
   zoom: number;
   isSelected: boolean;
   onSelect: () => void;
+
+  editorInstances: React.MutableRefObject<Record<string, Editor>>;
+  selectedItemId: string | null;
+  onItemSelect: (id: string) => void;
+  onItemRemove: (id: string) => void;
+  activeDragItemId: string | null;
 }
 
+const Placeholder = ({ id }: { id: string }) => (
+  <div
+    key={id}
+    className="border border-dashed border-gray-300/50 dark:border-border/50 rounded-md"
+  />
+);
+
 export const PrintablePage = ({
-  children,
+  pageId,
+  items,
   layout,
   zoom,
   isSelected,
   onSelect,
+  editorInstances,
+  selectedItemId,
+  onItemSelect,
+  onItemRemove,
+  activeDragItemId,
 }: PrintablePageProps) => {
   const A4_DIMENSIONS = {
     portrait: { width: "210mm", height: "297mm" },
@@ -25,6 +49,20 @@ export const PrintablePage = ({
   const pageHeight = A4_DIMENSIONS[layout.orientation].height;
   const transitionDuration = "200ms";
   const transitionTimingFunction = "ease";
+
+  const capacity = layout.cols * layout.rows;
+  const gridCells = [];
+
+  for (let i = 0; i < capacity; i++) {
+    if (items[i]) {
+      gridCells.push(items[i]);
+    } else {
+      gridCells.push({ id: `placeholder-${pageId}-${i}`, type: "placeholder" });
+    }
+  }
+
+  const sortableIds = gridCells.map((cell) => cell.id);
+
   return (
     <div
       className={cn(
@@ -57,7 +95,33 @@ export const PrintablePage = ({
             transition: `transform ${transitionDuration} ${transitionTimingFunction}`,
           }}
         >
-          {children}
+          <SortableContext items={sortableIds} strategy={rectSwappingStrategy}>
+            {gridCells.map((cell) => {
+              if (cell.type === "placeholder") {
+                return <Placeholder key={cell.id} id={cell.id} />;
+              }
+
+              const item = cell as GridItem;
+
+              const isGhost = item.id === activeDragItemId;
+
+              return (
+                <div key={item.id} style={{ opacity: isGhost ? 0 : 1 }}>
+                  <SortableItem
+                    item={item}
+                    editor={
+                      item.type === "text"
+                        ? editorInstances.current[item.id]
+                        : null
+                    }
+                    onSelect={onItemSelect}
+                    isSelected={item.id === selectedItemId}
+                    onRemove={onItemRemove}
+                  />
+                </div>
+              );
+            })}
+          </SortableContext>
         </div>
       </div>
     </div>
