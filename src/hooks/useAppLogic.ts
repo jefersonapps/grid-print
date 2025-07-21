@@ -557,30 +557,47 @@ export const useAppLogic = () => {
       const printPagesHtml = updatedPages
         .filter((page) => page.items.length > 0)
         .map((page) => {
-          const printReadyFiles = page.items.map((item) => {
-            const gridItemStyle = `display: flex; align-items: ${item.style.alignItems}; justify-content: center; overflow: hidden; border: 1px dashed #ccc; box-sizing: border-box; border-radius: ${item.style.borderRadius}px; background-color: white; position: relative;`;
-            if (item.type === "text") {
-              return `<div class="pdf-grid-item" style="${gridItemStyle}"><div class="ProseMirror" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; overflow: hidden;">${item.content}</div></div>`;
-            }
-            const getTransformOrigin = () => {
-              switch (item.style.alignItems) {
-                case "flex-start":
-                  return "center top";
-                case "flex-end":
-                  return "center bottom";
-                default:
-                  return "center center";
-              }
-            };
-            const imageStyle = `transform: translateX(${
-              item.style.offsetX
-            }%) translateY(${item.style.offsetY}%) scale(${
-              item.style.scale
-            }); transform-origin: ${getTransformOrigin()}; max-width: 100%; max-height: 100%; object-fit: contain;`;
-            return `<div class="pdf-grid-item" style="${gridItemStyle}"><img src="${item.content}" alt="${item.name}" style="${imageStyle}" /></div>`;
-          });
+          // --- LÓGICA DE CORREÇÃO DO GRID PARA IMPRESSÃO ---
+          const capacity = layout.cols * layout.rows;
+          const gridCellsHtml: string[] = [];
+          const pageItems = page.items;
 
-          const pageContent = `<div class="pdf-page-grid">${printReadyFiles.join(
+          for (let i = 0; i < capacity; i++) {
+            const item = pageItems[i];
+            if (item) {
+              // Se existe um item, renderiza-o
+              const gridItemStyle = `display: flex; align-items: ${item.style.alignItems}; justify-content: center; overflow: hidden; border: 1px dashed #ccc; box-sizing: border-box; border-radius: ${item.style.borderRadius}px; background-color: white; position: relative;`;
+              if (item.type === "text") {
+                gridCellsHtml.push(
+                  `<div class="pdf-grid-item" style="${gridItemStyle}"><div class="ProseMirror" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; overflow: hidden;">${item.content}</div></div>`
+                );
+              } else {
+                const getTransformOrigin = () => {
+                  switch (item.style.alignItems) {
+                    case "flex-start":
+                      return "center top";
+                    case "flex-end":
+                      return "center bottom";
+                    default:
+                      return "center center";
+                  }
+                };
+                const imageStyle = `transform: translateX(${
+                  item.style.offsetX
+                }%) translateY(${item.style.offsetY}%) scale(${
+                  item.style.scale
+                }); transform-origin: ${getTransformOrigin()}; max-width: 100%; max-height: 100%; object-fit: contain;`;
+                gridCellsHtml.push(
+                  `<div class="pdf-grid-item" style="${gridItemStyle}"><img src="${item.content}" alt="${item.name}" style="${imageStyle}" /></div>`
+                );
+              }
+            } else {
+              // Se não existe um item, renderiza uma célula vazia (placeholder)
+              gridCellsHtml.push(`<div class="pdf-grid-item-empty"></div>`);
+            }
+          }
+
+          const pageContent = `<div class="pdf-page-grid">${gridCellsHtml.join(
             ""
           )}</div>`;
           return `<div class="pdf-page-container">${pageContent}</div>`;
@@ -588,7 +605,7 @@ export const useAppLogic = () => {
         .join("");
 
       const printPageStructureCSS = `<style>
-        @import url('https:
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap');
         @page {
           size: A4 ${layout.orientation};
           margin: 0 !important;
@@ -615,7 +632,7 @@ export const useAppLogic = () => {
           width: 100%;
           height: 100%;
         }
-        .pdf-grid-item {
+        .pdf-grid-item, .pdf-grid-item-empty {
           box-sizing: border-box;
           overflow: hidden;
         }
