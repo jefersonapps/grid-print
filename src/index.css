@@ -135,8 +135,7 @@
 
 ::-webkit-scrollbar-thumb {
   @apply bg-muted-foreground/50 rounded-full;
-
-  @apply border-2 border-solid border-muted/80;
+  @apply border-2 border-solid border-muted/50;
 }
 
 ::-webkit-scrollbar-thumb:hover {
