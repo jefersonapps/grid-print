@@ -60,6 +60,10 @@ function AppContent() {
     handleImageUploadToEditor,
     triggerEditorImageImport,
     handlePrint,
+    undo,
+    redo,
+    canUndo,
+    canRedo,
   } = useAppLogic();
 
   const sensors = useSensors(
@@ -122,6 +126,10 @@ function AppContent() {
               isProcessing={isProcessing}
               hasItems={allItems.length > 0}
               activeEditor={activeEditor}
+              onUndo={undo}
+              onRedo={redo}
+              canUndo={canUndo}
+              canRedo={canRedo}
             />
             <div
               ref={pageViewportRef}

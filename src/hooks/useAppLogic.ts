@@ -6,6 +6,7 @@ import type { DragEndEvent } from "@dnd-kit/core";
 
 import { useMediaQuery } from "./useMediaQuery";
 import { useSidebar } from "@/context/sidebar-context";
+import { useHistory } from "./useHistory";
 import { createNewEditor } from "@/editor/config";
 import { readFileAsDataURL } from "@/lib/utils";
 import type {
@@ -20,6 +21,11 @@ GlobalWorkerOptions.workerSrc = new URL(
   "pdfjs-dist/build/pdf.worker.mjs",
   import.meta.url
 ).toString();
+
+interface AppState {
+  pages: Page[];
+  layout: LayoutConfig;
+}
 
 const processFilesToGridItems = async (
   files: FileList
@@ -89,19 +95,32 @@ const processFilesToGridItems = async (
 };
 
 export const useAppLogic = () => {
-  const [pages, setPages] = useState<Page[]>([
-    { id: `page-${Date.now()}`, items: [] },
-  ]);
+  const initialState: AppState = {
+    pages: [{ id: `page-${Date.now()}`, items: [] }],
+    layout: {
+      cols: 2,
+      rows: 2,
+      pageMargin: 10,
+      gap: 5,
+      orientation: "portrait",
+    },
+  };
+
+  const {
+    state: appState,
+    setState: setAppState,
+    undo,
+    redo,
+    canUndo,
+    canRedo,
+    clear: clearHistory,
+  } = useHistory<AppState>(initialState);
+
+  const { pages, layout } = appState;
+
   const [selectedPageId, setSelectedPageId] = useState<string | null>(null);
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
   const [activeEditor, setActiveEditor] = useState<Editor | null>(null);
-  const [layout, setLayout] = useState<LayoutConfig>({
-    cols: 2,
-    rows: 2,
-    pageMargin: 10,
-    gap: 5,
-    orientation: "portrait",
-  });
   const [isProcessing, setIsProcessing] = useState(false);
   const [previewZoom, setPreviewZoom] = useState(1);
   const [activeDragItem, setActiveDragItem] = useState<GridItem | null>(null);
@@ -171,6 +190,10 @@ export const useAppLogic = () => {
     setActiveDragItem(null);
   };
 
+  const commitStateChange = (updater: (currentState: AppState) => AppState) => {
+    setAppState(updater);
+  };
+
   const handleDragOver = (event: import("@dnd-kit/core").DragOverEvent) => {
     const { active, over } = event;
 
@@ -181,96 +204,71 @@ export const useAppLogic = () => {
     ) {
       return;
     }
-
-    setPages((currentPages) => {
-      const activePageIndex = currentPages.findIndex((p) =>
-        p.items.some((item) => item.id === active.id)
-      );
-      const activeItemIndex = currentPages[activePageIndex]?.items.findIndex(
-        (item) => item.id === active.id
-      );
-
-      const overPageIndex = currentPages.findIndex((p) =>
-        p.items.some((item) => item.id === over.id)
-      );
-      const overItemIndex = currentPages[overPageIndex]?.items.findIndex(
-        (item) => item.id === over.id
-      );
-
-      if (
-        activePageIndex === -1 ||
-        overPageIndex === -1 ||
-        activeItemIndex === undefined ||
-        overItemIndex === undefined
-      ) {
-        return currentPages;
-      }
-
-      if (
-        currentPages[activePageIndex].items[activeItemIndex]?.id ===
-        currentPages[overPageIndex].items[overItemIndex]?.id
-      ) {
-        return currentPages;
-      }
-
-      const newPages = JSON.parse(JSON.stringify(currentPages));
-
-      if (activePageIndex === overPageIndex) {
-        const items = newPages[activePageIndex].items;
-        [items[activeItemIndex], items[overItemIndex]] = [
-          items[overItemIndex],
-          items[activeItemIndex],
-        ];
-      } else {
-        const activePageItems = newPages[activePageIndex].items;
-        const overPageItems = newPages[overPageIndex].items;
-        [activePageItems[activeItemIndex], overPageItems[overItemIndex]] = [
-          overPageItems[overItemIndex],
-          activePageItems[activeItemIndex],
-        ];
-      }
-
-      return newPages;
-    });
   };
 
   const handleDragEnd = (event: DragEndEvent) => {
-    const { over } = event;
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
 
-    if (over && over.id.toString().startsWith("placeholder")) {
-      const { active } = event;
+    commitStateChange((current) => {
+      const newPages: Page[] = JSON.parse(JSON.stringify(current.pages));
 
-      setPages((currentPages) => {
-        const newPages: Page[] = JSON.parse(JSON.stringify(currentPages));
+      let activePageIndex = -1,
+        activeItemIndex = -1;
+      let overPageIndex = -1,
+        overItemIndex = -1;
 
-        const activePageIndex = newPages.findIndex((p) =>
-          p.items.some((item) => item.id === active.id)
-        );
-        if (activePageIndex === -1) return newPages;
-        const activeItemIndex = newPages[activePageIndex].items.findIndex(
+      for (let i = 0; i < newPages.length; i++) {
+        const foundActiveIndex = newPages[i].items.findIndex(
           (item) => item.id === active.id
         );
-        const [movedItem] = newPages[activePageIndex].items.splice(
-          activeItemIndex,
-          1
-        );
+        if (foundActiveIndex !== -1) {
+          activePageIndex = i;
+          activeItemIndex = foundActiveIndex;
+          break;
+        }
+      }
 
+      if (activePageIndex === -1) return current;
+
+      const [movedItem] = newPages[activePageIndex].items.splice(
+        activeItemIndex,
+        1
+      );
+
+      if (over.id.toString().startsWith("placeholder")) {
         const [, pageId, indexStr] = over.id.toString().split("-");
-        const overPageIndex = newPages.findIndex((p) => p.id === pageId);
-        const overItemIndex = parseInt(indexStr, 10);
-        newPages[overPageIndex].items.splice(overItemIndex, 0, movedItem);
+        overPageIndex = newPages.findIndex((p) => p.id === pageId);
+        overItemIndex = parseInt(indexStr, 10);
+        if (overPageIndex !== -1) {
+          newPages[overPageIndex].items.splice(overItemIndex, 0, movedItem);
+        }
+      } else {
+        for (let i = 0; i < newPages.length; i++) {
+          const foundOverIndex = newPages[i].items.findIndex(
+            (item) => item.id === over.id
+          );
+          if (foundOverIndex !== -1) {
+            overPageIndex = i;
+            overItemIndex = foundOverIndex;
+            break;
+          }
+        }
+        if (overPageIndex !== -1) {
+          newPages[overPageIndex].items.splice(overItemIndex, 0, movedItem);
+        }
+      }
 
-        return newPages;
-      });
-    }
+      return { ...current, pages: newPages };
+    });
   };
 
   const addItemsToPages = useCallback(
     (newItems: GridItem[]) => {
       if (newItems.length === 0) return;
-      setPages((currentPages) => {
-        const updatedPages: Page[] = JSON.parse(JSON.stringify(currentPages));
-        const capacity = layout.cols * layout.rows;
+      commitStateChange((current) => {
+        const updatedPages: Page[] = JSON.parse(JSON.stringify(current.pages));
+        const capacity = current.layout.cols * current.layout.rows;
 
         let targetPageIndex = updatedPages.findIndex(
           (p) => p.id === selectedPageId
@@ -300,10 +298,10 @@ export const useAppLogic = () => {
           }
         });
 
-        return updatedPages;
+        return { ...current, pages: updatedPages };
       });
     },
-    [layout.cols, layout.rows, selectedPageId]
+    [selectedPageId]
   );
 
   const handleFileProcessing = useCallback(
@@ -347,14 +345,15 @@ export const useAppLogic = () => {
     };
 
     const onBlur = ({ editor }: { editor: Editor }) => {
-      setPages((currentPages) =>
-        currentPages.map((page) => ({
+      commitStateChange((current) => ({
+        ...current,
+        pages: current.pages.map((page) => ({
           ...page,
           items: page.items.map((item) =>
             item.id === id ? { ...item, content: editor.getHTML() } : item
           ),
-        }))
-      );
+        })),
+      }));
     };
 
     const newEditor = createNewEditor(newItem.content, onFocus, onBlur);
@@ -397,9 +396,8 @@ export const useAppLogic = () => {
         !replacingItemId ||
         !event.target.files ||
         event.target.files.length === 0
-      ) {
+      )
         return;
-      }
 
       const file = event.target.files[0];
       setIsProcessing(true);
@@ -413,15 +411,15 @@ export const useAppLogic = () => {
         return;
       }
 
-      setPages((currentPages) => {
-        const allCurrentItems = currentPages.flatMap((p) => p.items);
+      commitStateChange((current) => {
+        const allCurrentItems = current.pages.flatMap((p) => p.items);
         const itemIndexToReplace = allCurrentItems.findIndex(
           (item) => item.id === replacingItemId
         );
 
         if (itemIndexToReplace === -1) {
           console.error("Item a ser substituído não encontrado.");
-          return currentPages;
+          return current;
         }
 
         const oldItem = allCurrentItems[itemIndexToReplace];
@@ -440,26 +438,25 @@ export const useAppLogic = () => {
         const finalItemsList = [...allCurrentItems];
         finalItemsList.splice(itemIndexToReplace, 1, ...newItems);
 
-        const capacity = layout.cols * layout.rows;
+        const capacity = current.layout.cols * current.layout.rows;
         const newPages: Page[] = [];
         let currentPage: Page | null = null;
 
         finalItemsList.forEach((item, index) => {
           if (!currentPage || currentPage.items.length >= capacity) {
-            currentPage = {
-              id: `page-${Date.now()}-${index}`,
-              items: [],
-            };
+            currentPage = { id: `page-${Date.now()}-${index}`, items: [] };
             newPages.push(currentPage);
           }
           currentPage.items.push(item);
         });
 
-        if (newPages.length === 0) {
-          return [{ id: `page-${Date.now()}`, items: [] }];
-        }
-
-        return newPages;
+        return {
+          ...current,
+          pages:
+            newPages.length > 0
+              ? newPages
+              : [{ id: `page-${Date.now()}`, items: [] }],
+        };
       });
 
       toast.success("Item substituído com sucesso!");
@@ -467,32 +464,41 @@ export const useAppLogic = () => {
       setReplacingItemId(null);
       if (replaceItemInputRef.current) replaceItemInputRef.current.value = "";
     },
-    [replacingItemId, selectedItemId, layout.cols, layout.rows]
+    [replacingItemId, selectedItemId]
   );
 
   const handleRemoveItem = useCallback(
     (idToRemove: string) => {
       const itemToRemove = allItems.find((item) => item.id === idToRemove);
       if (!itemToRemove) return;
+
       if (itemToRemove.type === "text") {
         const editorInstance = editorInstances.current[idToRemove];
-        if (editorInstance && !editorInstance.isDestroyed) {
+        if (editorInstance && !editorInstance.isDestroyed)
           editorInstance.destroy();
-        }
         delete editorInstances.current[idToRemove];
       }
       if (selectedItemId === idToRemove) {
         setSelectedItemId(null);
         setActiveEditor(null);
       }
-      setPages((currentPages) =>
-        currentPages
-          .map((page) => ({
-            ...page,
-            items: page.items.filter((item) => item.id !== idToRemove),
-          }))
-          .filter((page, index) => page.items.length > 0 || index === 0)
-      );
+
+      commitStateChange((current) => {
+        const pagesAfterItemRemoval = current.pages.map((page) => ({
+          ...page,
+          items: page.items.filter((item) => item.id !== idToRemove),
+        }));
+
+        let pagesWithContent = pagesAfterItemRemoval.filter(
+          (page) => page.items.length > 0
+        );
+
+        if (pagesWithContent.length === 0) {
+          pagesWithContent = [{ id: `page-${Date.now()}`, items: [] }];
+        }
+
+        return { ...current, pages: pagesWithContent };
+      });
 
       toast.error(`"${itemToRemove.name}" removido.`);
     },
@@ -501,23 +507,21 @@ export const useAppLogic = () => {
 
   const handleClear = useCallback(() => {
     Object.values(editorInstances.current).forEach((editor) => {
-      if (!editor.isDestroyed) {
-        editor.destroy();
-      }
+      if (!editor.isDestroyed) editor.destroy();
     });
     editorInstances.current = {};
-    const firstPageId = `page-${Date.now()}`;
-    setPages([{ id: firstPageId, items: [] }]);
-    setSelectedPageId(firstPageId);
+    clearHistory();
     setSelectedItemId(null);
     setActiveEditor(null);
-  }, []);
+  }, [clearHistory]);
 
   const handleAddPage = useCallback(() => {
-    const newPageId = `page-${Date.now()}`;
-    const newPage: Page = { id: newPageId, items: [] };
-    setPages((currentPages) => [...currentPages, newPage]);
-    setSelectedPageId(newPageId);
+    commitStateChange((current) => {
+      const newPageId = `page-${Date.now()}`;
+      const newPage: Page = { id: newPageId, items: [] };
+      setSelectedPageId(newPageId);
+      return { ...current, pages: [...current.pages, newPage] };
+    });
     toast.success("Nova página adicionada!");
   }, []);
 
@@ -529,25 +533,27 @@ export const useAppLogic = () => {
       pageToRemove.items.forEach((item) => {
         if (item.type === "text" && editorInstances.current[item.id]) {
           const editor = editorInstances.current[item.id];
-          if (editor && !editor.isDestroyed) {
-            editor.destroy();
-          }
+          if (editor && !editor.isDestroyed) editor.destroy();
           delete editorInstances.current[item.id];
         }
       });
 
-      const pageIndex = pages.findIndex((p) => p.id === pageIdToRemove);
-      const newPages = pages.filter((p) => p.id !== pageIdToRemove);
+      commitStateChange((current) => {
+        const pageIndex = current.pages.findIndex(
+          (p) => p.id === pageIdToRemove
+        );
+        let newPages = current.pages.filter((p) => p.id !== pageIdToRemove);
 
-      if (newPages.length === 0) {
-        const newPageId = `page-${Date.now()}`;
-        setPages([{ id: newPageId, items: [] }]);
-        setSelectedPageId(newPageId);
-      } else {
-        const newIndexToSelect = Math.max(0, pageIndex - 1);
-        setSelectedPageId(newPages[newIndexToSelect].id);
-        setPages(newPages);
-      }
+        if (newPages.length === 0) {
+          const newPageId = `page-${Date.now()}`;
+          newPages = [{ id: newPageId, items: [] }];
+          setSelectedPageId(newPageId);
+        } else {
+          const newIndexToSelect = Math.max(0, pageIndex - 1);
+          setSelectedPageId(newPages[newIndexToSelect].id);
+        }
+        return { ...current, pages: newPages };
+      });
 
       toast.success("Página removida com sucesso!");
     },
@@ -556,40 +562,32 @@ export const useAppLogic = () => {
 
   const handleLayoutChange = useCallback(
     (key: keyof Omit<LayoutConfig, "itemScale">, value: number | string) => {
-      setLayout((prevLayout) => {
-        const newLayout = { ...prevLayout, [key]: value };
+      commitStateChange((current) => {
+        const newLayout = { ...current.layout, [key]: value };
         const { cols, rows } = newLayout;
         const newCapacity = Number(cols) * Number(rows);
 
-        setPages((currentPages) => {
-          const allCurrentItems = currentPages.flatMap((p) => p.items);
+        const allCurrentItems = current.pages.flatMap((p) => p.items);
+        if (allCurrentItems.length === 0)
+          return { ...current, layout: newLayout };
 
-          if (allCurrentItems.length === 0) {
-            return currentPages;
+        const newPages: Page[] = [];
+        let currentPage: Page | null = null;
+        allCurrentItems.forEach((item, index) => {
+          if (!currentPage || currentPage.items.length >= newCapacity) {
+            currentPage = { id: `page-${Date.now()}-${index}`, items: [] };
+            newPages.push(currentPage);
           }
-
-          const newPages: Page[] = [];
-          let currentPage: Page | null = null;
-
-          allCurrentItems.forEach((item, index) => {
-            if (!currentPage || currentPage.items.length >= newCapacity) {
-              currentPage = {
-                id: `page-${Date.now()}-${index}`,
-                items: [],
-              };
-              newPages.push(currentPage);
-            }
-            currentPage.items.push(item);
-          });
-
-          if (newPages.length === 0) {
-            return [{ id: `page-${Date.now()}`, items: [] }];
-          }
-
-          return newPages;
+          currentPage.items.push(item);
         });
 
-        return newLayout;
+        return {
+          layout: newLayout,
+          pages:
+            newPages.length > 0
+              ? newPages
+              : [{ id: `page-${Date.now()}`, items: [] }],
+        };
       });
     },
     []
@@ -597,24 +595,25 @@ export const useAppLogic = () => {
 
   const handleItemStyleChange = useCallback(
     (itemId: string, newStyle: Partial<ItemStyle>) => {
-      setPages((currentPages) =>
-        currentPages.map((page) => ({
+      commitStateChange((current) => ({
+        ...current,
+        pages: current.pages.map((page) => ({
           ...page,
           items: page.items.map((item) =>
             item.id === itemId
               ? { ...item, style: { ...item.style, ...newStyle } }
               : item
           ),
-        }))
-      );
+        })),
+      }));
     },
     []
   );
+
   const handleImageUploadToEditor = useCallback(
     async (event: React.ChangeEvent<HTMLInputElement>) => {
-      if (!activeEditor || !event.target.files || !event.target.files[0]) {
+      if (!activeEditor || !event.target.files || !event.target.files[0])
         return;
-      }
       const file = event.target.files[0];
       try {
         const url = await readFileAsDataURL(file);
@@ -624,9 +623,7 @@ export const useAppLogic = () => {
         console.error("Image upload error:", error);
         toast.error("Falha ao carregar a imagem.");
       } finally {
-        if (editorImageInputRef.current) {
-          editorImageInputRef.current.value = "";
-        }
+        if (editorImageInputRef.current) editorImageInputRef.current.value = "";
       }
     },
     [activeEditor]
@@ -655,8 +652,6 @@ export const useAppLogic = () => {
         return item;
       }),
     }));
-
-    setPages(updatedPages);
 
     let iframe: HTMLIFrameElement | null = null;
     try {
@@ -730,7 +725,7 @@ export const useAppLogic = () => {
         .join("");
 
       const printPageStructureCSS = `<style>
-        @import url('https:
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap');
         @page {
           size: A4 ${layout.orientation};
           margin: 0 !important;
@@ -844,5 +839,9 @@ export const useAppLogic = () => {
     handleImageUploadToEditor,
     triggerEditorImageImport,
     handlePrint,
+    undo,
+    redo,
+    canUndo,
+    canRedo,
   };
 };
