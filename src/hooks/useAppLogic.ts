@@ -21,6 +21,73 @@ GlobalWorkerOptions.workerSrc = new URL(
   import.meta.url
 ).toString();
 
+const processFilesToGridItems = async (
+  files: FileList
+): Promise<GridItem[]> => {
+  const newItems: GridItem[] = [];
+  const defaultStyle: ItemStyle = {
+    scale: 1,
+    alignItems: "center",
+    offsetX: 0,
+    offsetY: 0,
+    borderRadius: 0,
+  };
+  const desiredDpi = 300;
+  for (const file of Array.from(files)) {
+    const fileIdBase = `${file.name}-${Date.now()}`;
+    if (file.type.startsWith("image/")) {
+      const content = await readFileAsDataURL(file);
+      newItems.push({
+        id: fileIdBase,
+        name: file.name,
+        type: "image",
+        content,
+        style: defaultStyle,
+      });
+    } else if (file.type === "application/pdf") {
+      try {
+        const arrayBuffer = await new Promise<ArrayBuffer>(
+          (resolve, reject) => {
+            const r = new FileReader();
+            r.onload = () => resolve(r.result as ArrayBuffer);
+            r.onerror = reject;
+            r.readAsArrayBuffer(file);
+          }
+        );
+        const pdf = await getDocument({ data: arrayBuffer }).promise;
+        for (let i = 1; i <= pdf.numPages; i++) {
+          const page = await pdf.getPage(i);
+          const viewportDefault = page.getViewport({ scale: 1 });
+          const scale =
+            (desiredDpi / viewportDefault.width) * (viewportDefault.width / 72);
+          const viewport = page.getViewport({ scale });
+          const canvas = document.createElement("canvas");
+          canvas.width = viewport.width;
+          canvas.height = viewport.height;
+          const context = canvas.getContext("2d");
+          if (context) {
+            await page.render({ canvasContext: context, viewport }).promise;
+            const content = canvas.toDataURL("image/png");
+            newItems.push({
+              id: `${fileIdBase}-p${i}`,
+              name: `${file.name} (Pág. ${i})`,
+              type: "pdf_page",
+              content,
+              style: defaultStyle,
+            });
+          }
+        }
+      } catch (error: unknown) {
+        console.error("PDF Error:", error);
+        toast.error(`Falha ao processar PDF: ${file.name}`);
+      }
+    } else {
+      toast.warning(`Tipo de arquivo não suportado: ${file.name}`);
+    }
+  }
+  return newItems;
+};
+
 export const useAppLogic = () => {
   const [pages, setPages] = useState<Page[]>([
     { id: `page-${Date.now()}`, items: [] },
@@ -38,9 +105,11 @@ export const useAppLogic = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [previewZoom, setPreviewZoom] = useState(1);
   const [activeDragItem, setActiveDragItem] = useState<GridItem | null>(null);
+  const [replacingItemId, setReplacingItemId] = useState<string | null>(null);
 
   const editorInstances: EditorInstancesRef = useRef({});
   const editorImageInputRef = useRef<HTMLInputElement>(null);
+  const replaceItemInputRef = useRef<HTMLInputElement>(null);
   const pageViewportRef = useRef<HTMLDivElement>(null);
 
   const allItems = pages.flatMap((p) => p.items);
@@ -241,68 +310,7 @@ export const useAppLogic = () => {
     async (droppedFiles: FileList) => {
       setIsProcessing(true);
       toast.info("Processando arquivos em alta qualidade...");
-      const newItems: GridItem[] = [];
-      const defaultStyle: ItemStyle = {
-        scale: 1,
-        alignItems: "center",
-        offsetX: 0,
-        offsetY: 0,
-        borderRadius: 0,
-      };
-      const desiredDpi = 300;
-      for (const file of Array.from(droppedFiles)) {
-        const fileIdBase = `${file.name}-${Date.now()}`;
-        if (file.type.startsWith("image/")) {
-          const content = await readFileAsDataURL(file);
-          newItems.push({
-            id: fileIdBase,
-            name: file.name,
-            type: "image",
-            content,
-            style: defaultStyle,
-          });
-        } else if (file.type === "application/pdf") {
-          try {
-            const arrayBuffer = await new Promise<ArrayBuffer>(
-              (resolve, reject) => {
-                const r = new FileReader();
-                r.onload = () => resolve(r.result as ArrayBuffer);
-                r.onerror = reject;
-                r.readAsArrayBuffer(file);
-              }
-            );
-            const pdf = await getDocument({ data: arrayBuffer }).promise;
-            for (let i = 1; i <= pdf.numPages; i++) {
-              const page = await pdf.getPage(i);
-              const viewportDefault = page.getViewport({ scale: 1 });
-              const scale =
-                (desiredDpi / viewportDefault.width) *
-                (viewportDefault.width / 72);
-              const viewport = page.getViewport({ scale });
-              const canvas = document.createElement("canvas");
-              canvas.width = viewport.width;
-              canvas.height = viewport.height;
-              const context = canvas.getContext("2d");
-              if (context) {
-                await page.render({ canvasContext: context, viewport }).promise;
-                const content = canvas.toDataURL("image/png");
-                newItems.push({
-                  id: `${fileIdBase}-p${i}`,
-                  name: `${file.name} (Pág. ${i})`,
-                  type: "pdf_page",
-                  content,
-                  style: defaultStyle,
-                });
-              }
-            }
-          } catch (error: unknown) {
-            console.error("PDF Error:", error);
-            toast.error(`Falha ao processar PDF: ${file.name}`);
-          }
-        } else {
-          toast.warning(`Tipo de arquivo não suportado: ${file.name}`);
-        }
-      }
+      const newItems = await processFilesToGridItems(droppedFiles);
       addItemsToPages(newItems);
       setIsProcessing(false);
       if (newItems.length > 0) {
@@ -376,6 +384,90 @@ export const useAppLogic = () => {
       }
     },
     [allItems, selectedItemId]
+  );
+
+  const handleTriggerReplaceItem = useCallback((itemId: string) => {
+    setReplacingItemId(itemId);
+    replaceItemInputRef.current?.click();
+  }, []);
+
+  const handleItemReplacement = useCallback(
+    async (event: React.ChangeEvent<HTMLInputElement>) => {
+      if (
+        !replacingItemId ||
+        !event.target.files ||
+        event.target.files.length === 0
+      ) {
+        return;
+      }
+
+      const file = event.target.files[0];
+      setIsProcessing(true);
+      toast.info(`Substituindo item por "${file.name}"...`);
+
+      const newItems = await processFilesToGridItems(event.target.files);
+
+      if (newItems.length === 0) {
+        setIsProcessing(false);
+        toast.error("Falha ao processar o novo arquivo.");
+        return;
+      }
+
+      setPages((currentPages) => {
+        const allCurrentItems = currentPages.flatMap((p) => p.items);
+        const itemIndexToReplace = allCurrentItems.findIndex(
+          (item) => item.id === replacingItemId
+        );
+
+        if (itemIndexToReplace === -1) {
+          console.error("Item a ser substituído não encontrado.");
+          return currentPages;
+        }
+
+        const oldItem = allCurrentItems[itemIndexToReplace];
+        if (oldItem.type === "text") {
+          const editorInstance = editorInstances.current[oldItem.id];
+          if (editorInstance && !editorInstance.isDestroyed) {
+            editorInstance.destroy();
+          }
+          delete editorInstances.current[oldItem.id];
+        }
+        if (selectedItemId === replacingItemId) {
+          setSelectedItemId(null);
+          setActiveEditor(null);
+        }
+
+        const finalItemsList = [...allCurrentItems];
+        finalItemsList.splice(itemIndexToReplace, 1, ...newItems);
+
+        const capacity = layout.cols * layout.rows;
+        const newPages: Page[] = [];
+        let currentPage: Page | null = null;
+
+        finalItemsList.forEach((item, index) => {
+          if (!currentPage || currentPage.items.length >= capacity) {
+            currentPage = {
+              id: `page-${Date.now()}-${index}`,
+              items: [],
+            };
+            newPages.push(currentPage);
+          }
+          currentPage.items.push(item);
+        });
+
+        if (newPages.length === 0) {
+          return [{ id: `page-${Date.now()}`, items: [] }];
+        }
+
+        return newPages;
+      });
+
+      toast.success("Item substituído com sucesso!");
+      setIsProcessing(false);
+      setReplacingItemId(null);
+      if (replaceItemInputRef.current) replaceItemInputRef.current.value = "";
+    },
+    [replacingItemId, selectedItemId, layout.cols, layout.rows]
   );
 
   const handleRemoveItem = useCallback(
@@ -638,7 +730,7 @@ export const useAppLogic = () => {
         .join("");
 
       const printPageStructureCSS = `<style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap');
+        @import url('https:
         @page {
           size: A4 ${layout.orientation};
           margin: 0 !important;
@@ -729,6 +821,7 @@ export const useAppLogic = () => {
     setPreviewZoom,
     editorInstances,
     editorImageInputRef,
+    replaceItemInputRef,
     pageViewportRef,
     allItems,
     selectedItem,
@@ -738,9 +831,11 @@ export const useAppLogic = () => {
     handleDragOver,
     handleDragEnd,
     handleFileProcessing,
+    handleItemReplacement,
     handleAddTextBlock,
     handleSelect,
     handleRemoveItem,
+    handleTriggerReplaceItem,
     handleClear,
     handleAddPage,
     handleRemovePage,

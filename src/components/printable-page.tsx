@@ -18,6 +18,7 @@ interface PrintablePageProps {
   selectedItemId: string | null;
   onItemSelect: (id: string) => void;
   onItemRemove: (id: string) => void;
+  onItemReplace: (id: string) => void;
   activeDragItemId: string | null;
 }
 
@@ -39,6 +40,7 @@ export const PrintablePage = ({
   selectedItemId,
   onItemSelect,
   onItemRemove,
+  onItemReplace,
   activeDragItemId,
 }: PrintablePageProps) => {
   const A4_DIMENSIONS = {
@@ -117,6 +119,7 @@ export const PrintablePage = ({
                     onSelect={onItemSelect}
                     isSelected={item.id === selectedItemId}
                     onRemove={onItemRemove}
+                    onReplace={onItemReplace}
                   />
                 </div>
               );

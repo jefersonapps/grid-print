@@ -3,7 +3,7 @@ import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { GripHorizontal, Trash2 } from "lucide-react";
+import { GripHorizontal, Trash2, RefreshCw } from "lucide-react";
 import { TextEditor } from "./editor/text-editor";
 import type { GridItem } from "@/types";
 import type { Editor } from "@tiptap/react";
@@ -15,6 +15,7 @@ interface SortableItemProps {
   onSelect: (id: string) => void;
   isSelected: boolean;
   onRemove: (id: string) => void;
+  onReplace: (id: string) => void;
 }
 
 export const SortableItem = React.memo(
@@ -25,6 +26,7 @@ export const SortableItem = React.memo(
     onSelect,
     isSelected,
     onRemove,
+    onReplace,
   }: SortableItemProps) => {
     const { attributes, listeners, setNodeRef, transform, transition } =
       useSortable({ id: item.id });
@@ -67,17 +69,30 @@ export const SortableItem = React.memo(
           >
             <GripHorizontal className="size-4 text-muted-foreground dark:text-foreground" />
           </div>
-          <Button
-            variant="outline"
-            size="icon"
-            className="absolute top-1 right-1 h-6 w-6 z-20 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
-            onClick={(e) => {
-              e.stopPropagation();
-              onRemove(item.id);
-            }}
-          >
-            <Trash2 className="h-4 w-4 text-rose-700" />
-          </Button>
+          <div className="absolute top-1 right-1 z-20 flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-6 w-6 cursor-pointer"
+              onClick={(e) => {
+                e.stopPropagation();
+                onRemove(item.id);
+              }}
+            >
+              <Trash2 className="h-4 w-4 text-rose-700" />
+            </Button>
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-6 w-6 cursor-pointer"
+              onClick={(e) => {
+                e.stopPropagation();
+                onReplace(item.id);
+              }}
+            >
+              <RefreshCw className="h-4 w-4 text-blue-700" />
+            </Button>
+          </div>
 
           <div
             style={contentContainerStyle}
@@ -158,17 +173,30 @@ export const SortableItem = React.memo(
           isSelected && "ring-2 ring-primary ring-offset-2"
         )}
       >
-        <Button
-          variant="outline"
-          size="icon"
-          className="absolute top-1 right-1 h-6 w-6 z-20 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
-          onClick={(e) => {
-            e.stopPropagation();
-            onRemove(item.id);
-          }}
-        >
-          <Trash2 className="h-4 w-4 text-rose-700" />
-        </Button>
+        <div className="absolute top-1 right-1 z-20 flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+          <Button
+            variant="outline"
+            size="icon"
+            className="h-6 w-6 cursor-pointer"
+            onClick={(e) => {
+              e.stopPropagation();
+              onRemove(item.id);
+            }}
+          >
+            <Trash2 className="h-4 w-4 text-rose-700" />
+          </Button>
+          <Button
+            variant="outline"
+            size="icon"
+            className="h-6 w-6 cursor-pointer"
+            onClick={(e) => {
+              e.stopPropagation();
+              onReplace(item.id);
+            }}
+          >
+            <RefreshCw className="h-4 w-4 text-blue-700" />
+          </Button>
+        </div>
         <img
           src={item.content}
           alt={item.name}

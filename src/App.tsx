@@ -37,6 +37,7 @@ function AppContent() {
     setPreviewZoom,
     editorInstances,
     editorImageInputRef,
+    replaceItemInputRef,
     pageViewportRef,
     allItems,
     selectedItem,
@@ -46,9 +47,11 @@ function AppContent() {
     handleDragCancel,
     handleDragEnd,
     handleFileProcessing,
+    handleItemReplacement,
     handleAddTextBlock,
     handleSelect,
     handleRemoveItem,
+    handleTriggerReplaceItem,
     handleClear,
     handleAddPage,
     handleRemovePage,
@@ -80,6 +83,13 @@ function AppContent() {
         ref={editorImageInputRef}
         onChange={handleImageUploadToEditor}
         accept="image/*"
+        className="hidden"
+      />
+      <input
+        type="file"
+        ref={replaceItemInputRef}
+        onChange={handleItemReplacement}
+        accept="image/*,application/pdf"
         className="hidden"
       />
       <div className="flex h-screen bg-neutral-50 dark:bg-background overflow-hidden">
@@ -132,6 +142,7 @@ function AppContent() {
                       selectedItemId={selectedItemId}
                       onItemSelect={handleSelect}
                       onItemRemove={handleRemoveItem}
+                      onItemReplace={handleTriggerReplaceItem}
                       activeDragItemId={activeDragItem?.id || null}
                     />
                   ))}
@@ -164,6 +175,7 @@ function AppContent() {
             isSelected={true}
             onSelect={() => {}}
             onRemove={() => {}}
+            onReplace={() => {}}
           />
         ) : null}
       </DragOverlay>
