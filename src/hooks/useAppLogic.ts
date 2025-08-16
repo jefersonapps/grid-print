@@ -212,11 +212,13 @@ export const useAppLogic = () => {
 
         newItems.forEach((newItem) => {
           let placed = false;
-          for (let i = 0; i < updatedPages.length && !placed; i++) {
+
+          for (let i = 0; i < updatedPages.length; i++) {
             const pageIndex = (targetPageIndex + i) % updatedPages.length;
             if (updatedPages[pageIndex].items.length < capacity) {
               updatedPages[pageIndex].items.push(newItem);
               placed = true;
+              break;
             }
           }
 
@@ -462,7 +464,41 @@ export const useAppLogic = () => {
 
   const handleLayoutChange = useCallback(
     (key: keyof Omit<LayoutConfig, "itemScale">, value: number | string) => {
-      setLayout((prev) => ({ ...prev, [key]: value }));
+      setLayout((prevLayout) => {
+        const newLayout = { ...prevLayout, [key]: value };
+        const { cols, rows } = newLayout;
+        const newCapacity = Number(cols) * Number(rows);
+
+        setPages((currentPages) => {
+          const allCurrentItems = currentPages.flatMap((p) => p.items);
+
+          if (allCurrentItems.length === 0) {
+            return currentPages;
+          }
+
+          const newPages: Page[] = [];
+          let currentPage: Page | null = null;
+
+          allCurrentItems.forEach((item, index) => {
+            if (!currentPage || currentPage.items.length >= newCapacity) {
+              currentPage = {
+                id: `page-${Date.now()}-${index}`,
+                items: [],
+              };
+              newPages.push(currentPage);
+            }
+            currentPage.items.push(item);
+          });
+
+          if (newPages.length === 0) {
+            return [{ id: `page-${Date.now()}`, items: [] }];
+          }
+
+          return newPages;
+        });
+
+        return newLayout;
+      });
     },
     []
   );
@@ -557,7 +593,6 @@ export const useAppLogic = () => {
       const printPagesHtml = updatedPages
         .filter((page) => page.items.length > 0)
         .map((page) => {
-          // --- LÓGICA DE CORREÇÃO DO GRID PARA IMPRESSÃO ---
           const capacity = layout.cols * layout.rows;
           const gridCellsHtml: string[] = [];
           const pageItems = page.items;
@@ -565,7 +600,6 @@ export const useAppLogic = () => {
           for (let i = 0; i < capacity; i++) {
             const item = pageItems[i];
             if (item) {
-              // Se existe um item, renderiza-o
               const gridItemStyle = `display: flex; align-items: ${item.style.alignItems}; justify-content: center; overflow: hidden; border: 1px dashed #ccc; box-sizing: border-box; border-radius: ${item.style.borderRadius}px; background-color: white; position: relative;`;
               if (item.type === "text") {
                 gridCellsHtml.push(
@@ -592,7 +626,6 @@ export const useAppLogic = () => {
                 );
               }
             } else {
-              // Se não existe um item, renderiza uma célula vazia (placeholder)
               gridCellsHtml.push(`<div class="pdf-grid-item-empty"></div>`);
             }
           }

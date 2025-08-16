@@ -156,16 +156,14 @@ function AppContent() {
         {activeDragItem ? (
           <SortableItem
             item={activeDragItem}
-            // NÃO passamos mais a instância do editor.
-            // Em vez disso, passamos o CONTEÚDO HTML como uma string.
             htmlContent={
               activeDragItem.type === "text"
                 ? editorInstances.current[activeDragItem.id]?.getHTML()
                 : undefined
             }
             isSelected={true}
-            onSelect={() => {}} // Não precisa de ação no overlay
-            onRemove={() => {}} // Não precisa de ação no overlay
+            onSelect={() => {}}
+            onRemove={() => {}}
           />
         ) : null}
       </DragOverlay>

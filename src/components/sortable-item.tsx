@@ -34,7 +34,6 @@ export const SortableItem = React.memo(
       transition,
     };
 
-    // --- RENDERIZAÇÃO CONDICIONAL PARA TEXTO ---
     if (item.type === "text") {
       const wrapperStyle = {
         ...dndStyle,
@@ -110,12 +109,11 @@ export const SortableItem = React.memo(
       );
     }
 
-    // --- RENDERIZAÇÃO CONDICIONAL PARA IMAGENS (E OUTROS TIPOS) ---
     const imageContainerStyle = {
       ...dndStyle,
       display: "flex",
       justifyContent: "center",
-      alignItems: item.style.alignItems, // AQUI ESTÁ A LÓGICA DE ALINHAMENTO
+      alignItems: item.style.alignItems,
       backgroundColor: "transparent",
       borderRadius: `${item.style.borderRadius || 2}px`,
       overflow: "hidden",
