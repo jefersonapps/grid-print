@@ -7,7 +7,7 @@ export const AppSidebar = ({ children }: { children: React.ReactNode }) => {
   return (
     <aside
       className={cn(
-        "fixed top-0 left-0 z-40 h-screen bg-neutral-100 dark:bg-card-foreground/5 transition-transform duration-300 ease-in-out lg:static lg:h-auto",
+        "fixed top-0 left-0 z-40 h-screen bg-neutral-100 dark:bg-card transition-transform duration-300 ease-in-out lg:static lg:h-auto",
         "w-full lg:w-96",
         isSidebarOpen
           ? "translate-x-0"

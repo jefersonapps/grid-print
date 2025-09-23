@@ -98,10 +98,10 @@ export const useAppLogic = () => {
   const initialState: AppState = {
     pages: [{ id: `page-${Date.now()}`, items: [] }],
     layout: {
-      cols: 2,
-      rows: 2,
-      pageMargin: 10,
-      gap: 5,
+      cols: 1,
+      rows: 1,
+      pageMargin: 0,
+      gap: 0,
       orientation: "portrait",
     },
   };
