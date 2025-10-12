@@ -71,9 +71,7 @@ function AppContent() {
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
   );
 
-  // MODIFICAÇÃO: Lógica de clique no fundo mais robusta
   const handleBackgroundClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    // Apenas deseleciona se o clique foi diretamente no contêiner de fundo
     if (e.target === e.currentTarget) {
       handleSelect("");
     }
@@ -140,12 +138,10 @@ function AppContent() {
             <div
               ref={pageViewportRef}
               className="flex-1 overflow-auto p-2 pb-24 sm:p-4 sm:pb-24 text-center"
-              onClick={handleBackgroundClick} // MODIFICAÇÃO
+              onClick={handleBackgroundClick}
             >
               <div
                 className="inline-block min-w-full"
-                // MODIFICAÇÃO: O div interno também precisa impedir a propagação para
-                // o pai não pensar que o clique foi no "fundo"
                 onClick={(e) => e.stopPropagation()}
               >
                 <div className="flex flex-col items-center gap-4 lg:flex-row lg:flex-wrap lg:justify-center">

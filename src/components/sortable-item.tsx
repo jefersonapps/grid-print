@@ -171,7 +171,6 @@ export const SortableItem = React.memo(
         ref={setNodeRef}
         style={imageContainerStyle}
         {...attributes}
-        // MODIFICAÇÃO: onClick retornado para o local correto
         onClick={(e) => {
           e.stopPropagation();
           onSelect(item.id);

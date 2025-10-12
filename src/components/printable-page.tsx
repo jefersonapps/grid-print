@@ -114,7 +114,6 @@ export const PrintablePage = ({
                     opacity: isGhost ? 0 : 1,
                     overflow: "hidden",
                   }}
-                  // MODIFICAÇÃO: onClick removido daqui para resolver o conflito
                 >
                   <SortableItem
                     item={item}

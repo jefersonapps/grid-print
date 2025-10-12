@@ -335,7 +335,6 @@ export const useAppLogic = () => {
       setActiveEditor(editor);
     };
 
-    // MODIFICAÇÃO: Lógica de deseleção adicionada aqui
     const onBlur = ({ editor }: { editor: Editor }) => {
       commitStateChange((current) => ({
         ...current,
@@ -346,7 +345,7 @@ export const useAppLogic = () => {
           ),
         })),
       }));
-      // Ao perder o foco, deseleciona o item
+
       handleSelect("");
     };
 
@@ -359,7 +358,7 @@ export const useAppLogic = () => {
       setIsSidebarOpen(false);
     }
     setTimeout(() => newEditor.commands.focus(), 100);
-  }, [isMobile, setIsSidebarOpen, addItemsToPages, handleSelect]); // handleSelect adicionado às dependências
+  }, [isMobile, setIsSidebarOpen, addItemsToPages, handleSelect]);
 
   const handleTriggerReplaceItem = useCallback((itemId: string) => {
     setReplacingItemId(itemId);
@@ -714,7 +713,7 @@ export const useAppLogic = () => {
         .join("");
 
       const printPageStructureCSS = `<style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap');
+        @import url('https:
         @page {
           size: A4 ${layout.orientation};
           margin: 0 !important;
