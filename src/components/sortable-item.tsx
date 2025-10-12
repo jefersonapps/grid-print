@@ -134,6 +134,7 @@ export const SortableItem = React.memo(
       overflow: "hidden",
       position: "relative" as const,
       height: "100%",
+      width: "100%",
     };
 
     const getTransformOrigin = () => {
@@ -151,8 +152,9 @@ export const SortableItem = React.memo(
       transform: `translateX(${item.style.offsetX}%) translateY(${item.style.offsetY}%) scale(${item.style.scale})`,
       transformOrigin: getTransformOrigin(),
       transition: "transform 0.2s, transform-origin 0.2s",
-      maxWidth: "100%",
-      maxHeight: "100%",
+      width: "100%",
+      height: "100%",
+      // MODIFICAÇÃO: Garante que a imagem inteira seja visível, preservando a proporção.
       objectFit: "contain",
     };
 
@@ -169,8 +171,7 @@ export const SortableItem = React.memo(
         className={cn(
           "relative group h-full min-h-0",
           "border border-dashed border-gray-300 dark:border-border",
-          "cursor-grab",
-          isSelected && "ring-2 ring-primary ring-offset-2"
+          "cursor-grab"
         )}
       >
         <div className="absolute top-1 right-1 z-20 flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity">

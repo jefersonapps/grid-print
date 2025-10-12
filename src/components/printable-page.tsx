@@ -104,19 +104,21 @@ export const PrintablePage = ({
               }
 
               const item = cell as GridItem;
-
+              const isItemSelected = item.id === selectedItemId;
               const isGhost = item.id === activeDragItemId;
 
               return (
                 <div
                   key={item.id}
+                  className={cn(
+                    "relative flex items-center justify-center",
+                    // MODIFICAÇÃO: A borda de seleção agora é aplicada aqui
+                    isItemSelected &&
+                      "z-10 ring-2 ring-primary ring-offset-2 rounded-sm"
+                  )}
                   style={{
                     opacity: isGhost ? 0 : 1,
                     overflow: "hidden",
-                    position: "relative",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
                   }}
                 >
                   <SortableItem
@@ -127,7 +129,7 @@ export const PrintablePage = ({
                         : null
                     }
                     onSelect={onItemSelect}
-                    isSelected={item.id === selectedItemId}
+                    isSelected={isItemSelected}
                     onRemove={onItemRemove}
                     onReplace={onItemReplace}
                   />

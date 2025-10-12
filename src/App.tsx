@@ -23,6 +23,7 @@ import { SortableItem } from "./components/sortable-item";
 import { PreviewZoomControl } from "./components/preview-zoom-control";
 import { EditingSheet } from "./components/editing-sheet";
 import { ThemeProvider } from "./components/theme-provider";
+import { PagesQuantity } from "./components/pages-quantity";
 
 function AppContent() {
   const {
@@ -64,6 +65,7 @@ function AppContent() {
     redo,
     canUndo,
     canRedo,
+    handleApplyStyleToAll,
   } = useAppLogic();
 
   const sensors = useSensors(
@@ -161,6 +163,7 @@ function AppContent() {
               value={previewZoom}
               onValueChange={setPreviewZoom}
             />
+            <PagesQuantity pagesQuantity={pages.length} />
           </main>
         </SidebarInset>
 
@@ -168,6 +171,7 @@ function AppContent() {
           selectedItem={selectedItem}
           onStyleChange={handleItemStyleChange}
           onClose={() => handleSelect("")}
+          onApplyStyleToAll={handleApplyStyleToAll}
         />
       </div>
 

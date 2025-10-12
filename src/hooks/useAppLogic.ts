@@ -28,7 +28,7 @@ interface AppState {
 }
 
 const processFilesToGridItems = async (
-  files: FileList
+  files: FileList | File[]
 ): Promise<GridItem[]> => {
   const newItems: GridItem[] = [];
   const defaultStyle: ItemStyle = {
@@ -305,10 +305,10 @@ export const useAppLogic = () => {
   );
 
   const handleFileProcessing = useCallback(
-    async (droppedFiles: FileList) => {
+    async (files: FileList | File[]) => {
       setIsProcessing(true);
       toast.info("Processando arquivos em alta qualidade...");
-      const newItems = await processFilesToGridItems(droppedFiles);
+      const newItems = await processFilesToGridItems(files);
       addItemsToPages(newItems);
       setIsProcessing(false);
       if (newItems.length > 0) {
@@ -610,6 +610,19 @@ export const useAppLogic = () => {
     []
   );
 
+  const handleApplyStyleToAll = useCallback((style: ItemStyle) => {
+    commitStateChange((current) => ({
+      ...current,
+      pages: current.pages.map((page) => ({
+        ...page,
+        items: page.items.map((item) =>
+          item.type !== "text" ? { ...item, style } : item
+        ),
+      })),
+    }));
+    toast.success("Estilo aplicado a todos os itens!");
+  }, []);
+
   const handleImageUploadToEditor = useCallback(
     async (event: React.ChangeEvent<HTMLInputElement>) => {
       if (!activeEditor || !event.target.files || !event.target.files[0])
@@ -707,7 +720,7 @@ export const useAppLogic = () => {
                   item.style.offsetX
                 }%) translateY(${item.style.offsetY}%) scale(${
                   item.style.scale
-                }); transform-origin: ${getTransformOrigin()}; max-width: 100%; max-height: 100%; object-fit: contain;`;
+                }); transform-origin: ${getTransformOrigin()}; width: 100%; height: 100%; object-fit: contain;`; // MODIFICAÇÃO
                 gridCellsHtml.push(
                   `<div class="pdf-grid-item" style="${gridItemStyle}"><img src="${item.content}" alt="${item.name}" style="${imageStyle}" /></div>`
                 );
@@ -843,5 +856,6 @@ export const useAppLogic = () => {
     redo,
     canUndo,
     canRedo,
+    handleApplyStyleToAll,
   };
 };

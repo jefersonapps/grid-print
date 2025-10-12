@@ -25,18 +25,25 @@ import type { GridItem, ItemStyle } from "@/types";
 interface EditingSheetProps {
   selectedItem: GridItem | null;
   onStyleChange: (id: string, newStyle: Partial<ItemStyle>) => void;
+  onApplyStyleToAll: (style: ItemStyle) => void;
   onClose: () => void;
 }
 
 export const EditingSheet = ({
   selectedItem,
   onStyleChange,
+  onApplyStyleToAll,
   onClose,
 }: EditingSheetProps) => {
   if (!selectedItem || selectedItem.type === "text") return null;
 
   const handleStyleChange = (styleUpdate: Partial<ItemStyle>) => {
     onStyleChange(selectedItem.id, styleUpdate);
+  };
+
+  const handleApplyToAll = () => {
+    onApplyStyleToAll(selectedItem.style);
+    onClose();
   };
 
   return (
@@ -129,7 +136,8 @@ export const EditingSheet = ({
           </div>
         </div>
         <SheetFooter>
-          <Button onClick={onClose} variant="outline" className="w-full">
+          <Button onClick={handleApplyToAll}>Aplicar a todos</Button>
+          <Button onClick={onClose} variant="outline">
             Fechar
           </Button>
         </SheetFooter>
