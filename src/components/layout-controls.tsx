@@ -115,6 +115,7 @@ export const LayoutControls = React.memo(
         <div className="space-y-2">
           <Label>Margem da Página ({layout.pageMargin}mm)</Label>
           <Slider
+            defaultValue={[0]}
             value={[layout.pageMargin]}
             onValueChange={(value) => onLayoutChange("pageMargin", value[0])}
             min={0}
@@ -125,6 +126,7 @@ export const LayoutControls = React.memo(
         <div className="space-y-2">
           <Label>Espaçamento ({layout.gap}mm)</Label>
           <Slider
+            defaultValue={[0]}
             value={[layout.gap]}
             onValueChange={(value) => onLayoutChange("gap", value[0])}
             min={0}

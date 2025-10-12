@@ -65,6 +65,7 @@ export const EditingSheet = ({
               {Math.round(selectedItem.style.scale * 100)}%)
             </Label>
             <Slider
+              defaultValue={[1]}
               value={[selectedItem.style.scale]}
               onValueChange={(v) => handleStyleChange({ scale: v[0] })}
               min={0.1}
@@ -100,6 +101,7 @@ export const EditingSheet = ({
               {selectedItem.style.borderRadius}px)
             </Label>
             <Slider
+              defaultValue={[0]}
               value={[selectedItem.style.borderRadius]}
               onValueChange={(v) => handleStyleChange({ borderRadius: v[0] })}
               min={0}
@@ -114,6 +116,7 @@ export const EditingSheet = ({
               {selectedItem.style.offsetX}%)
             </Label>
             <Slider
+              defaultValue={[0]}
               value={[selectedItem.style.offsetX]}
               onValueChange={(v) => handleStyleChange({ offsetX: v[0] })}
               min={-100}
@@ -127,6 +130,7 @@ export const EditingSheet = ({
               {selectedItem.style.offsetY}%)
             </Label>
             <Slider
+              defaultValue={[0]}
               value={[selectedItem.style.offsetY]}
               onValueChange={(v) => handleStyleChange({ offsetY: v[0] })}
               min={-100}

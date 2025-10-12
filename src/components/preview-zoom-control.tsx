@@ -35,6 +35,7 @@ export const PreviewZoomControl = React.memo(
               </Tooltip>
             </TooltipProvider>
             <Slider
+              defaultValue={[1]}
               value={[value]}
               onValueChange={(v) => onValueChange(v[0])}
               min={0.1}
