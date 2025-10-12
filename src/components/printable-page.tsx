@@ -112,7 +112,6 @@ export const PrintablePage = ({
                   key={item.id}
                   className={cn(
                     "relative flex items-center justify-center",
-                    // MODIFICAÇÃO: A borda de seleção agora é aplicada aqui
                     isItemSelected &&
                       "z-10 ring-2 ring-primary ring-offset-2 rounded-sm"
                   )}

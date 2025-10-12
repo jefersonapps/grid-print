@@ -154,7 +154,6 @@ export const SortableItem = React.memo(
       transition: "transform 0.2s, transform-origin 0.2s",
       width: "100%",
       height: "100%",
-      // MODIFICAÇÃO: Garante que a imagem inteira seja visível, preservando a proporção.
       objectFit: "contain",
     };
 

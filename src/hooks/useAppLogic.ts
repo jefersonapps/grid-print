@@ -720,7 +720,7 @@ export const useAppLogic = () => {
                   item.style.offsetX
                 }%) translateY(${item.style.offsetY}%) scale(${
                   item.style.scale
-                }); transform-origin: ${getTransformOrigin()}; width: 100%; height: 100%; object-fit: contain;`; // MODIFICAÇÃO
+                }); transform-origin: ${getTransformOrigin()}; width: 100%; height: 100%; object-fit: contain;`;
                 gridCellsHtml.push(
                   `<div class="pdf-grid-item" style="${gridItemStyle}"><img src="${item.content}" alt="${item.name}" style="${imageStyle}" /></div>`
                 );
