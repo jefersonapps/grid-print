@@ -108,7 +108,17 @@ export const PrintablePage = ({
               const isGhost = item.id === activeDragItemId;
 
               return (
-                <div key={item.id} style={{ opacity: isGhost ? 0 : 1 }}>
+                <div
+                  key={item.id}
+                  style={{
+                    opacity: isGhost ? 0 : 1,
+                    overflow: "hidden",
+                    position: "relative",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
                   <SortableItem
                     item={item}
                     editor={
