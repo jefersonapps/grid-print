@@ -2,7 +2,8 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import { toast } from "sonner";
 import { getDocument, GlobalWorkerOptions } from "pdfjs-dist";
 import { Editor } from "@tiptap/react";
-import type { DragEndEvent } from "@dnd-kit/core";
+import type { DragEndEvent, DragOverEvent } from "@dnd-kit/core";
+import { arrayMove } from "@dnd-kit/sortable";
 
 import { useMediaQuery } from "./useMediaQuery";
 import { useSidebar } from "@/context/sidebar-context";
@@ -137,6 +138,24 @@ export const useAppLogic = () => {
   const { setIsSidebarOpen } = useSidebar();
   const isMobile = useMediaQuery("(max-width: 1023px)");
 
+  const handleSelect = useCallback(
+    (id: string) => {
+      if (selectedItemId === id) return;
+      setSelectedItemId(id);
+      const item = allItems.find((i) => i.id === id);
+      if (item?.type === "text") {
+        const editor = editorInstances.current[id];
+        if (editor) {
+          editor.commands.focus();
+          setActiveEditor(editor);
+        }
+      } else {
+        setActiveEditor(null);
+      }
+    },
+    [allItems, selectedItemId]
+  );
+
   useEffect(() => {
     if (!selectedPageId && pages.length > 0) {
       setSelectedPageId(pages[0].id);
@@ -194,73 +213,45 @@ export const useAppLogic = () => {
     setAppState(updater);
   };
 
-  const handleDragOver = (event: import("@dnd-kit/core").DragOverEvent) => {
+  const handleDragOver = (event: DragOverEvent) => {
     const { active, over } = event;
 
-    if (
-      !over ||
-      active.id === over.id ||
-      over.id.toString().startsWith("placeholder")
-    ) {
+    if (!over || active.id === over.id) {
       return;
     }
-  };
-
-  const handleDragEnd = (event: DragEndEvent) => {
-    const { active, over } = event;
-    if (!over || active.id === over.id) return;
 
     commitStateChange((current) => {
-      const newPages: Page[] = JSON.parse(JSON.stringify(current.pages));
+      const allCurrentItems = current.pages.flatMap((p) => p.items);
+      const oldIndex = allCurrentItems.findIndex((i) => i.id === active.id);
+      const newIndex = allCurrentItems.findIndex((i) => i.id === over.id);
 
-      let activePageIndex = -1,
-        activeItemIndex = -1;
-      let overPageIndex = -1,
-        overItemIndex = -1;
-
-      for (let i = 0; i < newPages.length; i++) {
-        const foundActiveIndex = newPages[i].items.findIndex(
-          (item) => item.id === active.id
-        );
-        if (foundActiveIndex !== -1) {
-          activePageIndex = i;
-          activeItemIndex = foundActiveIndex;
-          break;
-        }
+      if (oldIndex === -1 || newIndex === -1) {
+        return current;
       }
 
-      if (activePageIndex === -1) return current;
+      const newItemsInOrder = arrayMove(allCurrentItems, oldIndex, newIndex);
 
-      const [movedItem] = newPages[activePageIndex].items.splice(
-        activeItemIndex,
-        1
-      );
+      const newPages: Page[] = [];
+      const capacity = current.layout.cols * current.layout.rows;
+      if (capacity <= 0) return current;
 
-      if (over.id.toString().startsWith("placeholder")) {
-        const [, pageId, indexStr] = over.id.toString().split("-");
-        overPageIndex = newPages.findIndex((p) => p.id === pageId);
-        overItemIndex = parseInt(indexStr, 10);
-        if (overPageIndex !== -1) {
-          newPages[overPageIndex].items.splice(overItemIndex, 0, movedItem);
-        }
-      } else {
-        for (let i = 0; i < newPages.length; i++) {
-          const foundOverIndex = newPages[i].items.findIndex(
-            (item) => item.id === over.id
-          );
-          if (foundOverIndex !== -1) {
-            overPageIndex = i;
-            overItemIndex = foundOverIndex;
-            break;
-          }
-        }
-        if (overPageIndex !== -1) {
-          newPages[overPageIndex].items.splice(overItemIndex, 0, movedItem);
-        }
+      for (let i = 0; i < newItemsInOrder.length; i += capacity) {
+        const pageItems = newItemsInOrder.slice(i, i + capacity);
+        const pageId =
+          current.pages[newPages.length]?.id || `page-${Date.now()}-${i}`;
+        newPages.push({ id: pageId, items: pageItems });
+      }
+
+      if (newPages.length === 0) {
+        newPages.push({ id: `page-${Date.now()}`, items: [] });
       }
 
       return { ...current, pages: newPages };
     });
+  };
+
+  const handleDragEnd = (_event: DragEndEvent) => {
+    handleDragCancel();
   };
 
   const addItemsToPages = useCallback(
@@ -344,6 +335,7 @@ export const useAppLogic = () => {
       setActiveEditor(editor);
     };
 
+    // MODIFICAÇÃO: Lógica de deseleção adicionada aqui
     const onBlur = ({ editor }: { editor: Editor }) => {
       commitStateChange((current) => ({
         ...current,
@@ -354,6 +346,8 @@ export const useAppLogic = () => {
           ),
         })),
       }));
+      // Ao perder o foco, deseleciona o item
+      handleSelect("");
     };
 
     const newEditor = createNewEditor(newItem.content, onFocus, onBlur);
@@ -365,25 +359,7 @@ export const useAppLogic = () => {
       setIsSidebarOpen(false);
     }
     setTimeout(() => newEditor.commands.focus(), 100);
-  }, [isMobile, setIsSidebarOpen, addItemsToPages]);
-
-  const handleSelect = useCallback(
-    (id: string) => {
-      if (selectedItemId === id) return;
-      setSelectedItemId(id);
-      const item = allItems.find((i) => i.id === id);
-      if (item?.type === "text") {
-        const editor = editorInstances.current[id];
-        if (editor) {
-          editor.commands.focus();
-          setActiveEditor(editor);
-        }
-      } else {
-        setActiveEditor(null);
-      }
-    },
-    [allItems, selectedItemId]
-  );
+  }, [isMobile, setIsSidebarOpen, addItemsToPages, handleSelect]); // handleSelect adicionado às dependências
 
   const handleTriggerReplaceItem = useCallback((itemId: string) => {
     setReplacingItemId(itemId);

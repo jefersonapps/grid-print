@@ -16,6 +16,7 @@ interface SortableItemProps {
   isSelected: boolean;
   onRemove: (id: string) => void;
   onReplace: (id: string) => void;
+  isOverlay?: boolean;
 }
 
 export const SortableItem = React.memo(
@@ -27,14 +28,23 @@ export const SortableItem = React.memo(
     isSelected,
     onRemove,
     onReplace,
+    isOverlay,
   }: SortableItemProps) => {
-    const { attributes, listeners, setNodeRef, transform, transition } =
-      useSortable({ id: item.id });
+    const {
+      attributes,
+      listeners,
+      setNodeRef,
+      transform,
+      transition,
+      isDragging,
+    } = useSortable({ id: item.id });
 
     const dndStyle = {
       transform: CSS.Transform.toString(transform),
       transition,
     };
+
+    const showAsActive = isSelected || isDragging || isOverlay;
 
     if (item.type === "text") {
       const wrapperStyle = {
@@ -58,20 +68,19 @@ export const SortableItem = React.memo(
           ref={setNodeRef}
           style={wrapperStyle}
           {...attributes}
-          className={cn("group", isSelected && "z-10")}
+          className={cn("group", showAsActive && "z-10")}
         >
-          <div
-            className={cn(
-              "absolute -top-4 left-1/2 -translate-x-1/2 p-1 z-30 cursor-grab bg-muted/50 dark:bg-muted/40 rounded-md transition-opacity border-1 border-muted shadow-sm backdrop-blur-[2px]",
-              isSelected ? "opacity-100" : "opacity-0 group-hover:opacity-100"
-            )}
-            {...listeners}
-          >
-            <GripHorizontal className="size-4 text-muted-foreground dark:text-foreground" />
-          </div>
           <div className="absolute top-1 right-1 z-20 flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
             <Button
-              variant="outline"
+              variant="secondary"
+              size="icon"
+              className="h-6 w-6 cursor-grab"
+              {...listeners}
+            >
+              <GripHorizontal className="size-4 text-muted-foreground dark:text-foreground" />
+            </Button>
+            <Button
+              variant="secondary"
               size="icon"
               className="h-6 w-6 cursor-pointer"
               onClick={(e) => {
@@ -82,7 +91,7 @@ export const SortableItem = React.memo(
               <Trash2 className="h-4 w-4 text-rose-700" />
             </Button>
             <Button
-              variant="outline"
+              variant="secondary"
               size="icon"
               className="h-6 w-6 cursor-pointer"
               onClick={(e) => {
@@ -90,7 +99,7 @@ export const SortableItem = React.memo(
                 onReplace(item.id);
               }}
             >
-              <RefreshCw className="h-4 w-4 text-blue-700" />
+              <RefreshCw className="h-4 w-4 text-secondary-foreground" />
             </Button>
           </div>
 
@@ -98,7 +107,7 @@ export const SortableItem = React.memo(
             style={contentContainerStyle}
             className={cn(
               "border border-dashed border-gray-300 dark:border-border",
-              isSelected && "ring-2 ring-primary"
+              showAsActive && "ring-2 ring-inset ring-primary"
             )}
           >
             {htmlContent ? (
@@ -162,7 +171,7 @@ export const SortableItem = React.memo(
         ref={setNodeRef}
         style={imageContainerStyle}
         {...attributes}
-        {...listeners}
+        // MODIFICAÇÃO: onClick retornado para o local correto
         onClick={(e) => {
           e.stopPropagation();
           onSelect(item.id);
@@ -170,12 +179,21 @@ export const SortableItem = React.memo(
         className={cn(
           "relative group h-full min-h-0",
           "border border-dashed border-gray-300 dark:border-border",
-          "cursor-grab"
+          "cursor-pointer",
+          showAsActive && "ring-2 ring-inset ring-primary"
         )}
       >
         <div className="absolute top-1 right-1 z-20 flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
           <Button
-            variant="outline"
+            variant="secondary"
+            size="icon"
+            className="h-6 w-6 cursor-grab"
+            {...listeners}
+          >
+            <GripHorizontal className="size-4 text-muted-foreground dark:text-foreground" />
+          </Button>
+          <Button
+            variant="secondary"
             size="icon"
             className="h-6 w-6 cursor-pointer"
             onClick={(e) => {
@@ -186,7 +204,7 @@ export const SortableItem = React.memo(
             <Trash2 className="h-4 w-4 text-rose-700" />
           </Button>
           <Button
-            variant="outline"
+            variant="secondary"
             size="icon"
             className="h-6 w-6 cursor-pointer"
             onClick={(e) => {
@@ -194,7 +212,7 @@ export const SortableItem = React.memo(
               onReplace(item.id);
             }}
           >
-            <RefreshCw className="h-4 w-4 text-blue-700" />
+            <RefreshCw className="h-4 w-4 text-secondary-foreground" />
           </Button>
         </div>
         <img

@@ -104,21 +104,17 @@ export const PrintablePage = ({
               }
 
               const item = cell as GridItem;
-              const isItemSelected = item.id === selectedItemId;
               const isGhost = item.id === activeDragItemId;
 
               return (
                 <div
                   key={item.id}
-                  className={cn(
-                    "relative flex items-center justify-center",
-                    isItemSelected &&
-                      "z-10 ring-2 ring-primary ring-offset-2 rounded-sm"
-                  )}
+                  className="relative flex items-center justify-center"
                   style={{
                     opacity: isGhost ? 0 : 1,
                     overflow: "hidden",
                   }}
+                  // MODIFICAÇÃO: onClick removido daqui para resolver o conflito
                 >
                   <SortableItem
                     item={item}
@@ -128,7 +124,7 @@ export const PrintablePage = ({
                         : null
                     }
                     onSelect={onItemSelect}
-                    isSelected={isItemSelected}
+                    isSelected={item.id === selectedItemId}
                     onRemove={onItemRemove}
                     onReplace={onItemReplace}
                   />

@@ -23,7 +23,6 @@ import { SortableItem } from "./components/sortable-item";
 import { PreviewZoomControl } from "./components/preview-zoom-control";
 import { EditingSheet } from "./components/editing-sheet";
 import { ThemeProvider } from "./components/theme-provider";
-import { PagesQuantity } from "./components/pages-quantity";
 
 function AppContent() {
   const {
@@ -72,16 +71,21 @@ function AppContent() {
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
   );
 
+  // MODIFICAÇÃO: Lógica de clique no fundo mais robusta
+  const handleBackgroundClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    // Apenas deseleciona se o clique foi diretamente no contêiner de fundo
+    if (e.target === e.currentTarget) {
+      handleSelect("");
+    }
+  };
+
   return (
     <DndContext
       sensors={sensors}
       collisionDetection={closestCenter}
       onDragStart={handleDragStart}
       onDragOver={handleDragOver}
-      onDragEnd={(event) => {
-        handleDragEnd(event);
-        handleDragCancel();
-      }}
+      onDragEnd={handleDragEnd}
       onDragCancel={handleDragCancel}
     >
       <input
@@ -136,8 +140,14 @@ function AppContent() {
             <div
               ref={pageViewportRef}
               className="flex-1 overflow-auto p-2 pb-24 sm:p-4 sm:pb-24 text-center"
+              onClick={handleBackgroundClick} // MODIFICAÇÃO
             >
-              <div className="inline-block min-w-full">
+              <div
+                className="inline-block min-w-full"
+                // MODIFICAÇÃO: O div interno também precisa impedir a propagação para
+                // o pai não pensar que o clique foi no "fundo"
+                onClick={(e) => e.stopPropagation()}
+              >
                 <div className="flex flex-col items-center gap-4 lg:flex-row lg:flex-wrap lg:justify-center">
                   {pages.map((page) => (
                     <PrintablePage
@@ -163,7 +173,6 @@ function AppContent() {
               value={previewZoom}
               onValueChange={setPreviewZoom}
             />
-            <PagesQuantity pagesQuantity={pages.length} />
           </main>
         </SidebarInset>
 
@@ -179,12 +188,13 @@ function AppContent() {
         {activeDragItem ? (
           <SortableItem
             item={activeDragItem}
+            isOverlay
             htmlContent={
               activeDragItem.type === "text"
                 ? editorInstances.current[activeDragItem.id]?.getHTML()
                 : undefined
             }
-            isSelected={true}
+            isSelected={false}
             onSelect={() => {}}
             onRemove={() => {}}
             onReplace={() => {}}
