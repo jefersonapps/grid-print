@@ -23,6 +23,7 @@ import { SortableItem } from "./components/sortable-item";
 import { PreviewZoomControl } from "./components/preview-zoom-control";
 import { EditingSheet } from "./components/editing-sheet";
 import { ThemeProvider } from "./components/theme-provider";
+import { PagesQuantity } from "./components/pages-quantity";
 
 function AppContent() {
   const {
@@ -169,6 +170,7 @@ function AppContent() {
               value={previewZoom}
               onValueChange={setPreviewZoom}
             />
+            <PagesQuantity pagesQuantity={pages.length} />
           </main>
         </SidebarInset>
 
