@@ -103,8 +103,10 @@ function AppContent() {
       />
       <div className="flex h-screen bg-neutral-50 dark:bg-background overflow-hidden">
         <AppSidebar>
-          <AppHeader />
-          <div className="space-y-4">
+          <div className="fixed top-0 left-0 w-full pt-2 pl-4 pr-4 backdrop-blur-md bg-card/50 z-50">
+            <AppHeader />
+          </div>
+          <div className="space-y-4 mt-14">
             <Toaster richColors position="bottom-right" />
             <FileImporter
               onFileProcessing={handleFileProcessing}

@@ -16,7 +16,7 @@ export const AppSidebar = ({ children }: { children: React.ReactNode }) => {
     >
       <div
         className={cn(
-          "overflow-y-auto h-full p-2 sm:p-4 transition-opacity",
+          "overflow-y-auto h-full p-2 sm:p-4 transition-opacity relative",
           isSidebarOpen ? "opacity-100" : "opacity-0"
         )}
       >
