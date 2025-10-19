@@ -146,17 +146,6 @@ export const SortableItem = React.memo(
       width: "100%",
     };
 
-    const getTransformOrigin = () => {
-      switch (item.style.alignItems) {
-        case "flex-start":
-          return "center top";
-        case "flex-end":
-          return "center bottom";
-        default:
-          return "center center";
-      }
-    };
-
     const imageStyle: React.CSSProperties = {
       transform: `translateX(${item.style.offsetX || 0}%) translateY(${
         item.style.offsetY || 0

@@ -712,8 +712,6 @@ export const useAppLogic = () => {
           for (let i = 0; i < capacity; i++) {
             const item = pageItems[i];
             if (item) {
-              // O `display:flex` e `justify-content` agora estão na classe .pdf-grid-item.
-              // O `align-items` dinâmico continua aqui para controlar o alinhamento vertical.
               const gridItemStyle = `align-items: ${item.style.alignItems}; border-radius: ${item.style.borderRadius}px; background-color: white;`;
 
               if (item.type === "text") {
@@ -721,7 +719,6 @@ export const useAppLogic = () => {
                   `<div class="pdf-grid-item" style="${gridItemStyle}"><div class="ProseMirror" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; overflow: hidden;">${item.content}</div></div>`
                 );
               } else {
-                // Este estilo para a imagem está correto e não entra em conflito com o alinhamento.
                 const imageStyle = `
                   transform: translateX(${item.style.offsetX}%) 
                              translateY(${item.style.offsetY}%) 
