@@ -158,11 +158,15 @@ export const SortableItem = React.memo(
     };
 
     const imageStyle: React.CSSProperties = {
-      transform: `translateX(${item.style.offsetX}%) translateY(${item.style.offsetY}%) scale(${item.style.scale})`,
-      transformOrigin: getTransformOrigin(),
+      transform: `translateX(${item.style.offsetX || 0}%) translateY(${
+        item.style.offsetY || 0
+      }%) scale(${item.style.scale || 1}) rotate(${item.style.rotate || 0}deg)`,
+
+      transformOrigin: "center center",
       transition: "transform 0.2s, transform-origin 0.2s",
-      width: "100%",
-      height: "100%",
+
+      maxWidth: "100%",
+      maxHeight: "100%",
       objectFit: "contain",
     };
 

@@ -19,6 +19,7 @@ import {
   Radius,
   MoveHorizontal,
   MoveVertical,
+  RotateCw,
 } from "lucide-react";
 import type { GridItem, ItemStyle } from "@/types";
 
@@ -45,6 +46,8 @@ export const EditingSheet = ({
     onApplyStyleToAll(selectedItem.style);
     onClose();
   };
+
+  const currentRotation = selectedItem.style.rotate || 0;
 
   return (
     <Sheet
@@ -73,6 +76,22 @@ export const EditingSheet = ({
               step={0.05}
             />
           </div>
+
+          <div className="space-y-2">
+            <Label className="flex items-center gap-2">
+              <RotateCw className="h-4 w-4" /> Rotação ({currentRotation}°)
+            </Label>
+            <Slider
+              value={[currentRotation]}
+              defaultValue={[0]}
+              onValueChange={(v) => handleStyleChange({ rotate: v[0] })}
+              min={-180}
+              max={180}
+              step={1}
+            />
+          </div>
+          <Separator />
+
           <div className="space-y-2">
             <Label>Alinhamento Vertical</Label>
             <ToggleGroup

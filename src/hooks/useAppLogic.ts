@@ -38,6 +38,7 @@ const processFilesToGridItems = async (
     offsetX: 0,
     offsetY: 0,
     borderRadius: 0,
+    rotate: 0,
   };
   const desiredDpi = 300;
   for (const file of Array.from(files)) {
@@ -327,6 +328,7 @@ export const useAppLogic = () => {
         offsetX: 0,
         offsetY: 0,
         borderRadius: 0,
+        rotate: 0,
       },
     };
 
@@ -678,12 +680,13 @@ export const useAppLogic = () => {
             box-sizing: border-box;
             overflow: hidden;
             position: relative;
+            /* ADICIONADO: Define o container da célula como flex para alinhar seu conteúdo */
+            display: flex;
+            justify-content: center;
           }
-          .pdf-grid-item img {
-            width: 100%;
-            height: 100%;
-            object-fit: contain;
-          }
+          
+          /* A regra ".pdf-grid-item img" que causava o conflito foi REMOVIDA. */
+
           .ProseMirror {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             padding: 8px; box-sizing: border-box; overflow: hidden;
@@ -709,27 +712,27 @@ export const useAppLogic = () => {
           for (let i = 0; i < capacity; i++) {
             const item = pageItems[i];
             if (item) {
-              const gridItemStyle = `display: flex; align-items: ${item.style.alignItems}; justify-content: center; overflow: hidden; border: 1px dashed #ccc; box-sizing: border-box; border-radius: ${item.style.borderRadius}px; background-color: white; position: relative;`;
+              // O `display:flex` e `justify-content` agora estão na classe .pdf-grid-item.
+              // O `align-items` dinâmico continua aqui para controlar o alinhamento vertical.
+              const gridItemStyle = `align-items: ${item.style.alignItems}; border-radius: ${item.style.borderRadius}px; background-color: white;`;
+
               if (item.type === "text") {
                 gridCellsHtml.push(
                   `<div class="pdf-grid-item" style="${gridItemStyle}"><div class="ProseMirror" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; overflow: hidden;">${item.content}</div></div>`
                 );
               } else {
-                const getTransformOrigin = () => {
-                  switch (item.style.alignItems) {
-                    case "flex-start":
-                      return "center top";
-                    case "flex-end":
-                      return "center bottom";
-                    default:
-                      return "center center";
-                  }
-                };
-                const imageStyle = `transform: translateX(${
-                  item.style.offsetX
-                }%) translateY(${item.style.offsetY}%) scale(${
-                  item.style.scale
-                }); transform-origin: ${getTransformOrigin()}; width: 100%; height: 100%; object-fit: contain;`;
+                // Este estilo para a imagem está correto e não entra em conflito com o alinhamento.
+                const imageStyle = `
+                  transform: translateX(${item.style.offsetX}%) 
+                             translateY(${item.style.offsetY}%) 
+                             scale(${item.style.scale}) 
+                             rotate(${item.style.rotate || 0}deg);
+                  transform-origin: center center;
+                  max-width: 100%;
+                  max-height: 100%;
+                  object-fit: contain;
+                `;
+
                 gridCellsHtml.push(
                   `<div class="pdf-grid-item" style="${gridItemStyle}"><img src="${item.content}" alt="${item.name}" style="${imageStyle}" /></div>`
                 );
@@ -788,7 +791,6 @@ export const useAppLogic = () => {
       }, 1500);
     }
   };
-
   return {
     pages,
     selectedPageId,

@@ -9,6 +9,7 @@ export interface ItemStyle {
   offsetX: number;
   offsetY: number;
   borderRadius: number;
+  rotate: number;
 }
 
 export interface GridItem {
