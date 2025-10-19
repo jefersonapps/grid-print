@@ -643,27 +643,88 @@ export const useAppLogic = () => {
 
     let iframe: HTMLIFrameElement | null = null;
     try {
-      const stylesheets = Array.from(document.styleSheets)
-        .map((styleSheet) => {
-          try {
-            if (styleSheet.cssRules) {
-              return `<style>${Array.from(styleSheet.cssRules)
-                .map((rule) => rule.cssText)
-                .join("\n")}</style>`;
-            }
-            if (styleSheet.href) {
-              return `<link rel="stylesheet" href="${styleSheet.href}">`;
-            }
-            return "";
-          } catch (error) {
-            console.error("Erro ao ler CSS:", error);
-            if (styleSheet.href) {
-              return `<link rel="stylesheet" href="${styleSheet.href}">`;
-            }
-            return "";
+      const printCSS = `
+        <style>
+          @import url('https:
+          
+          @page {
+            size: A4 ${layout.orientation};
+            margin: 0 !important;
           }
-        })
-        .join("\n");
+
+          body {
+            margin: 0 !important;
+            padding: 0 !important;
+            font-family: 'Inter', sans-serif;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+          }
+
+          .pdf-page-container {
+            width: ${layout.orientation === "landscape" ? "297mm" : "210mm"};
+            height: ${layout.orientation === "landscape" ? "210mm" : "297mm"};
+            box-sizing: border-box;
+            page-break-after: always;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+          }
+
+          .pdf-page-grid {
+            display: grid !important;
+            grid-template-columns: repeat(${layout.cols}, 1fr) !important;
+            grid-template-rows: repeat(${layout.rows}, 1fr) !important;
+            gap: ${layout.gap}mm !important;
+            padding: ${layout.pageMargin}mm !important;
+            box-sizing: border-box !important;
+            background: white !important;
+            width: 100%;
+            height: 100%;
+          }
+
+          .pdf-grid-item, .pdf-grid-item-empty {
+            box-sizing: border-box;
+            overflow: hidden;
+            position: relative;
+          }
+          
+          .pdf-grid-item img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain; /* ou 'cover', dependendo do resultado desejado */
+          }
+          
+          /* Estilos básicos para o conteúdo de texto do Tiptap/ProseMirror */
+          .ProseMirror {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            padding: 8px; /* Adiciona um respiro para o texto */
+            box-sizing: border-box;
+          }
+          .ProseMirror p {
+            margin: 0;
+          }
+          .ProseMirror h1, .ProseMirror h2, .ProseMirror h3 {
+            margin: 0 0 0.5em 0;
+          }
+          .ProseMirror ul, .ProseMirror ol {
+            padding-inline-start: 20px;
+            margin-block-start: 0.5em;
+            margin-block-end: 0.5em;
+          }
+
+          @media print {
+            .pdf-grid-item {
+              border: none !important; /* Remove bordas pontilhadas na impressão final */
+            }
+          }
+        </style>
+      `;
 
       const printPagesHtml = updatedPages
         .filter((page) => page.items.length > 0)
@@ -675,10 +736,20 @@ export const useAppLogic = () => {
           for (let i = 0; i < capacity; i++) {
             const item = pageItems[i];
             if (item) {
-              const gridItemStyle = `display: flex; align-items: ${item.style.alignItems}; justify-content: center; overflow: hidden; border: 1px dashed #ccc; box-sizing: border-box; border-radius: ${item.style.borderRadius}px; background-color: white; position: relative;`;
+              const gridItemStyle = `
+                display: flex; 
+                align-items: ${item.style.alignItems}; 
+                justify-content: center; 
+                overflow: hidden; 
+                border-radius: ${item.style.borderRadius}px; 
+                background-color: white;
+              `;
+
               if (item.type === "text") {
                 gridCellsHtml.push(
-                  `<div class="pdf-grid-item" style="${gridItemStyle}"><div class="ProseMirror" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; overflow: hidden;">${item.content}</div></div>`
+                  `<div class="pdf-grid-item" style="${gridItemStyle}">
+                     <div class="ProseMirror">${item.content}</div>
+                   </div>`
                 );
               } else {
                 const getTransformOrigin = () => {
@@ -691,13 +762,16 @@ export const useAppLogic = () => {
                       return "center center";
                   }
                 };
-                const imageStyle = `transform: translateX(${
-                  item.style.offsetX
-                }%) translateY(${item.style.offsetY}%) scale(${
-                  item.style.scale
-                }); transform-origin: ${getTransformOrigin()}; width: 100%; height: 100%; object-fit: contain;`;
+                const imageStyle = `
+                  transform: translateX(${item.style.offsetX}%) translateY(${
+                  item.style.offsetY
+                }%) scale(${item.style.scale}); 
+                  transform-origin: ${getTransformOrigin()};
+                `;
                 gridCellsHtml.push(
-                  `<div class="pdf-grid-item" style="${gridItemStyle}"><img src="${item.content}" alt="${item.name}" style="${imageStyle}" /></div>`
+                  `<div class="pdf-grid-item" style="${gridItemStyle}">
+                     <img src="${item.content}" alt="${item.name}" style="${imageStyle}" />
+                   </div>`
                 );
               }
             } else {
@@ -712,50 +786,7 @@ export const useAppLogic = () => {
         })
         .join("");
 
-      const printPageStructureCSS = `<style>
-        @import url('https:
-        @page {
-          size: A4 ${layout.orientation};
-          margin: 0 !important;
-        }
-        body {
-          margin: 0 !important;
-          padding: 0 !important;
-          font-family: 'Inter', sans-serif;
-        }
-        .pdf-page-container {
-          width: ${layout.orientation === "landscape" ? "297mm" : "210mm"};
-          height: ${layout.orientation === "landscape" ? "210mm" : "297mm"};
-          box-sizing: border-box;
-          page-break-after: always;
-        }
-        .pdf-page-grid {
-          display: grid !important;
-          grid-template-columns: repeat(${layout.cols}, 1fr) !important;
-          grid-template-rows: repeat(${layout.rows}, 1fr) !important;
-          gap: ${layout.gap}mm !important;
-          padding: ${layout.pageMargin}mm !important;
-          box-sizing: border-box !important;
-          background: white !important;
-          width: 100%;
-          height: 100%;
-        }
-        .pdf-grid-item, .pdf-grid-item-empty {
-          box-sizing: border-box;
-          overflow: hidden;
-        }
-        @media print {
-          html, body {
-            -webkit-print-color-adjust: exact;
-            print-color-adjust: exact;
-          }
-          .pdf-grid-item {
-            border: none !important;
-          }
-        }
-      </style>`;
-
-      const htmlContent = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Grid Print</title>${stylesheets}${printPageStructureCSS}</head><body>${printPagesHtml}</body></html>`;
+      const htmlContent = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Grid Print</title>${printCSS}</head><body>${printPagesHtml}</body></html>`;
 
       iframe = document.createElement("iframe");
       iframe.style.position = "absolute";
@@ -763,17 +794,22 @@ export const useAppLogic = () => {
       iframe.style.height = "0";
       iframe.style.border = "none";
       document.body.appendChild(iframe);
+
       const doc = iframe.contentWindow?.document;
       if (!doc) {
         throw new Error("Não foi possível acessar o documento do iframe.");
       }
+
       doc.open();
       doc.write(htmlContent);
       doc.close();
+
       iframe.onload = function () {
         if (iframe?.contentWindow) {
-          iframe.contentWindow.focus();
-          iframe.contentWindow.print();
+          setTimeout(() => {
+            iframe?.contentWindow?.focus();
+            iframe?.contentWindow?.print();
+          }, 200);
         }
       };
     } catch (error) {
