@@ -127,6 +127,7 @@ export const useAppLogic = () => {
   const [previewZoom, setPreviewZoom] = useState(1);
   const [activeDragItem, setActiveDragItem] = useState<GridItem | null>(null);
   const [replacingItemId, setReplacingItemId] = useState<string | null>(null);
+  const [isDataGeneratorOpen, setIsDataGeneratorOpen] = useState(false);
 
   const editorInstances: EditorInstancesRef = useRef({});
   const editorImageInputRef = useRef<HTMLInputElement>(null);
@@ -255,46 +256,30 @@ export const useAppLogic = () => {
     handleDragCancel();
   };
 
-  const addItemsToPages = useCallback(
-    (newItems: GridItem[]) => {
-      if (newItems.length === 0) return;
-      commitStateChange((current) => {
-        const updatedPages: Page[] = JSON.parse(JSON.stringify(current.pages));
-        const capacity = current.layout.cols * current.layout.rows;
+  const addItemsToPages = useCallback((newItems: GridItem[]) => {
+    if (newItems.length === 0) return;
+    commitStateChange((current) => {
+      const allCurrentItems = current.pages.flatMap((p) => p.items);
+      const combinedItems = [...allCurrentItems, ...newItems];
 
-        let targetPageIndex = updatedPages.findIndex(
-          (p) => p.id === selectedPageId
-        );
-        if (targetPageIndex === -1) {
-          targetPageIndex = Math.max(0, updatedPages.length - 1);
-        }
+      const capacity = current.layout.cols * current.layout.rows;
+      if (capacity <= 0) return current;
 
-        newItems.forEach((newItem) => {
-          let placed = false;
+      const newPages: Page[] = [];
+      for (let i = 0; i < combinedItems.length; i += capacity) {
+        const pageItems = combinedItems.slice(i, i + capacity);
+        const pageId =
+          current.pages[newPages.length]?.id || `page-${Date.now()}-${i}`;
+        newPages.push({ id: pageId, items: pageItems });
+      }
 
-          for (let i = 0; i < updatedPages.length; i++) {
-            const pageIndex = (targetPageIndex + i) % updatedPages.length;
-            if (updatedPages[pageIndex].items.length < capacity) {
-              updatedPages[pageIndex].items.push(newItem);
-              placed = true;
-              break;
-            }
-          }
+      if (newPages.length === 0) {
+        newPages.push({ id: `page-${Date.now()}`, items: [] });
+      }
 
-          if (!placed) {
-            const newPage = {
-              id: `page-${newItem.id}-${Date.now()}`,
-              items: [newItem],
-            };
-            updatedPages.push(newPage);
-          }
-        });
-
-        return { ...current, pages: updatedPages };
-      });
-    },
-    [selectedPageId]
-  );
+      return { ...current, pages: newPages };
+    });
+  }, []);
 
   const handleFileProcessing = useCallback(
     async (files: FileList | File[]) => {
@@ -788,6 +773,109 @@ export const useAppLogic = () => {
       }, 1500);
     }
   };
+
+  const handleDataGeneration = useCallback(
+    async (
+      templateImage: string,
+      rectangles: {
+        id: string;
+        x: number;
+        y: number;
+        width: number;
+        height: number;
+        column: string;
+      }[],
+      data: Record<string, string>[]
+    ) => {
+      setIsProcessing(true);
+      toast.info(`Gerando ${data.length} imagens...`);
+
+      const generatedItems: GridItem[] = [];
+      const defaultStyle: ItemStyle = {
+        scale: 1,
+        alignItems: "center",
+        offsetX: 0,
+        offsetY: 0,
+        borderRadius: 0,
+        rotate: 0,
+      };
+
+      const loadImage = (src: string): Promise<HTMLImageElement> =>
+        new Promise((resolve, reject) => {
+          const img = new Image();
+          img.onload = () => resolve(img);
+          img.onerror = reject;
+          img.src = src;
+        });
+
+      try {
+        const template = await loadImage(templateImage);
+        const canvas = document.createElement("canvas");
+        canvas.width = template.naturalWidth;
+        canvas.height = template.naturalHeight;
+        const ctx = canvas.getContext("2d");
+
+        if (!ctx) {
+          throw new Error("Não foi possível obter o contexto do canvas.");
+        }
+
+        for (const [index, row] of data.entries()) {
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+          ctx.drawImage(template, 0, 0);
+
+          rectangles.forEach((rect) => {
+            const text = row[rect.column];
+            if (text) {
+              const availableWidth = rect.width;
+              let fontSize = rect.height;
+
+              while (fontSize > 4) {
+                ctx.font = `bold ${fontSize}px Arial`;
+                const metrics = ctx.measureText(text);
+                const textWidth = metrics.width;
+                const textHeight =
+                  metrics.actualBoundingBoxAscent +
+                  metrics.actualBoundingBoxDescent;
+
+                if (textWidth <= availableWidth && textHeight <= rect.height) {
+                  break;
+                }
+                fontSize -= 1;
+              }
+
+              ctx.fillStyle = "black";
+              ctx.textAlign = "left";
+
+              ctx.textBaseline = "middle";
+
+              const yPos = rect.y + rect.height / 2;
+
+              ctx.fillText(text, rect.x, yPos, availableWidth);
+            }
+          });
+
+          const content = canvas.toDataURL("image/png");
+          generatedItems.push({
+            id: `generated-${Date.now()}-${index}`,
+            name: `Item Gerado ${index + 1}`,
+            type: "image",
+            content,
+            style: defaultStyle,
+          });
+        }
+
+        addItemsToPages(generatedItems);
+        toast.success(`${generatedItems.length} imagens geradas com sucesso!`);
+      } catch (error) {
+        console.error("Erro na geração de imagens:", error);
+        toast.error("Ocorreu um erro ao gerar as imagens.");
+      } finally {
+        setIsProcessing(false);
+      }
+    },
+    [addItemsToPages]
+  );
+
   return {
     pages,
     selectedPageId,
@@ -828,5 +916,8 @@ export const useAppLogic = () => {
     canUndo,
     canRedo,
     handleApplyStyleToAll,
+    isDataGeneratorOpen,
+    handleDataGeneration,
+    handleToggleDataGenerator: () => setIsDataGeneratorOpen((prev) => !prev),
   };
 };

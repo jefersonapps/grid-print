@@ -24,6 +24,7 @@ import { PreviewZoomControl } from "./components/preview-zoom-control";
 import { EditingSheet } from "./components/editing-sheet";
 import { ThemeProvider } from "./components/theme-provider";
 import { PagesQuantity } from "./components/pages-quantity";
+import { DataGeneratorDialog } from "./components/data-generation-dialog";
 
 function AppContent() {
   const {
@@ -66,6 +67,9 @@ function AppContent() {
     canUndo,
     canRedo,
     handleApplyStyleToAll,
+    isDataGeneratorOpen,
+    handleDataGeneration,
+    handleToggleDataGenerator,
   } = useAppLogic();
 
   const sensors = useSensors(
@@ -111,6 +115,7 @@ function AppContent() {
             <FileImporter
               onFileProcessing={handleFileProcessing}
               onAddTextBlock={handleAddTextBlock}
+              onGenerateFromDataClick={handleToggleDataGenerator}
             />
             <LayoutControls
               layout={layout}
@@ -201,6 +206,12 @@ function AppContent() {
           />
         ) : null}
       </DragOverlay>
+
+      <DataGeneratorDialog
+        isOpen={isDataGeneratorOpen}
+        onClose={handleToggleDataGenerator}
+        onGenerate={handleDataGeneration}
+      />
     </DndContext>
   );
 }

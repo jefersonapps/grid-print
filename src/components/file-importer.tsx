@@ -7,16 +7,19 @@ import {
   FileText,
   ImageIcon as ImageIconLucide,
   Type,
+  Database,
 } from "lucide-react";
 
 interface FileImporterProps {
   onFileProcessing: (files: FileList | File[]) => void;
   onAddTextBlock: () => void;
+  onGenerateFromDataClick: () => void;
 }
 
 export const FileImporter = ({
   onFileProcessing,
   onAddTextBlock,
+  onGenerateFromDataClick,
 }: FileImporterProps) => {
   useHotkeys("ctrl+v", async (e) => {
     e.preventDefault();
@@ -84,6 +87,14 @@ export const FileImporter = ({
         <Button variant="outline" className="w-full" onClick={onAddTextBlock}>
           <Type className="mr-2 h-4 w-4" />
           Adicionar Bloco de Texto
+        </Button>
+        <Button
+          variant="outline"
+          className="w-full"
+          onClick={onGenerateFromDataClick}
+        >
+          <Database className="mr-2 h-4 w-4" />
+          Gerar a partir de Dados
         </Button>
       </CardContent>
     </Card>
