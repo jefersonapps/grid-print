@@ -206,6 +206,7 @@ function AppContent() {
                 : undefined
             }
             isSelected={false}
+            onDuplicate={handleTriggerDuplicate}
             onSelect={() => {}}
             onRemove={() => {}}
             onReplace={() => {}}
