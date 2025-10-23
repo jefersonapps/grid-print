@@ -82,7 +82,13 @@ export const FileImporter = ({
           className="hidden"
           multiple
           accept=".pdf,.jpg,.jpeg,.png"
-          onChange={(e) => e.target.files && onFileProcessing(e.target.files)}
+          onChange={(e) => {
+            if (e.target.files) {
+              onFileProcessing(e.target.files);
+
+              e.currentTarget.value = "";
+            }
+          }}
         />
         <Button variant="outline" className="w-full" onClick={onAddTextBlock}>
           <Type className="mr-2 h-4 w-4" />
