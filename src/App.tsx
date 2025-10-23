@@ -25,6 +25,7 @@ import { EditingSheet } from "./components/editing-sheet";
 import { ThemeProvider } from "./components/theme-provider";
 import { PagesQuantity } from "./components/pages-quantity";
 import { DataGeneratorDialog } from "./components/data-generation-dialog";
+import { DuplicateItemDialog } from "./components/duplicate-item-dialog";
 
 function AppContent() {
   const {
@@ -70,6 +71,10 @@ function AppContent() {
     isDataGeneratorOpen,
     handleDataGeneration,
     handleToggleDataGenerator,
+    duplicatingItem,
+    handleTriggerDuplicate,
+    handleDuplicateItem,
+    handleCloseDuplicateDialog,
   } = useAppLogic();
 
   const sensors = useSensors(
@@ -167,6 +172,7 @@ function AppContent() {
                       onItemSelect={handleSelect}
                       onItemRemove={handleRemoveItem}
                       onItemReplace={handleTriggerReplaceItem}
+                      onItemDuplicate={handleTriggerDuplicate}
                       activeDragItemId={activeDragItem?.id || null}
                     />
                   ))}
@@ -212,6 +218,17 @@ function AppContent() {
         onClose={handleToggleDataGenerator}
         onGenerate={handleDataGeneration}
       />
+
+      {duplicatingItem && (
+        <DuplicateItemDialog
+          isOpen={!!duplicatingItem}
+          onClose={handleCloseDuplicateDialog}
+          onConfirm={(quantity) =>
+            handleDuplicateItem(duplicatingItem, quantity)
+          }
+          itemName={duplicatingItem.name}
+        />
+      )}
     </DndContext>
   );
 }

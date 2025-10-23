@@ -4,6 +4,7 @@ import { getDocument, GlobalWorkerOptions } from "pdfjs-dist";
 import { Editor } from "@tiptap/react";
 import type { DragEndEvent, DragOverEvent } from "@dnd-kit/core";
 import { arrayMove } from "@dnd-kit/sortable";
+import { v4 as uuidv4 } from "uuid";
 
 import { useMediaQuery } from "./useMediaQuery";
 import { useSidebar } from "@/context/sidebar-context";
@@ -128,6 +129,7 @@ export const useAppLogic = () => {
   const [activeDragItem, setActiveDragItem] = useState<GridItem | null>(null);
   const [replacingItemId, setReplacingItemId] = useState<string | null>(null);
   const [isDataGeneratorOpen, setIsDataGeneratorOpen] = useState(false);
+  const [duplicatingItem, setDuplicatingItem] = useState<GridItem | null>(null);
 
   const editorInstances: EditorInstancesRef = useRef({});
   const editorImageInputRef = useRef<HTMLInputElement>(null);
@@ -876,6 +878,62 @@ export const useAppLogic = () => {
     [addItemsToPages]
   );
 
+  const handleDuplicateItem = useCallback(
+    (itemToDuplicate: GridItem, quantity: number) => {
+      if (!itemToDuplicate) return;
+
+      const newCopies: GridItem[] = [];
+      for (let i = 0; i < quantity; i++) {
+        if (itemToDuplicate.type === "text") {
+          const newId = `text-${uuidv4()}`;
+          const newContent =
+            editorInstances.current[itemToDuplicate.id]?.getHTML() || "";
+
+          const newItem: GridItem = {
+            ...itemToDuplicate,
+            id: newId,
+            content: newContent,
+          };
+
+          const onFocus = ({ editor }: { editor: Editor }) => {
+            setSelectedItemId(newId);
+            setActiveEditor(editor);
+          };
+
+          const onBlur = ({ editor }: { editor: Editor }) => {
+            commitStateChange((current) => ({
+              ...current,
+              pages: current.pages.map((page) => ({
+                ...page,
+                items: page.items.map((item) =>
+                  item.id === newId
+                    ? { ...item, content: editor.getHTML() }
+                    : item
+                ),
+              })),
+            }));
+            handleSelect("");
+          };
+
+          const newEditor = createNewEditor(newContent, onFocus, onBlur);
+          editorInstances.current[newId] = newEditor;
+          newCopies.push(newItem);
+        } else {
+          newCopies.push({
+            ...itemToDuplicate,
+            id: `${itemToDuplicate.id}-copy-${uuidv4()}`,
+          });
+        }
+      }
+
+      addItemsToPages(newCopies);
+      toast.success(
+        `${quantity} cópia(s) de "${itemToDuplicate.name}" criada(s)!`
+      );
+    },
+    [addItemsToPages]
+  );
+
   return {
     pages,
     selectedPageId,
@@ -919,5 +977,9 @@ export const useAppLogic = () => {
     isDataGeneratorOpen,
     handleDataGeneration,
     handleToggleDataGenerator: () => setIsDataGeneratorOpen((prev) => !prev),
+    duplicatingItem,
+    handleTriggerDuplicate: setDuplicatingItem,
+    handleDuplicateItem,
+    handleCloseDuplicateDialog: () => setDuplicatingItem(null),
   };
 };

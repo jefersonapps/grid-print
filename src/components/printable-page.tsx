@@ -13,12 +13,12 @@ interface PrintablePageProps {
   zoom: number;
   isSelected: boolean;
   onSelect: () => void;
-
   editorInstances: React.MutableRefObject<Record<string, Editor>>;
   selectedItemId: string | null;
   onItemSelect: (id: string) => void;
   onItemRemove: (id: string) => void;
   onItemReplace: (id: string) => void;
+  onItemDuplicate: (item: GridItem) => void;
   activeDragItemId: string | null;
 }
 
@@ -41,6 +41,7 @@ export const PrintablePage = ({
   onItemSelect,
   onItemRemove,
   onItemReplace,
+  onItemDuplicate,
   activeDragItemId,
 }: PrintablePageProps) => {
   const A4_DIMENSIONS = {
@@ -126,6 +127,7 @@ export const PrintablePage = ({
                     isSelected={item.id === selectedItemId}
                     onRemove={onItemRemove}
                     onReplace={onItemReplace}
+                    onDuplicate={onItemDuplicate}
                   />
                 </div>
               );
