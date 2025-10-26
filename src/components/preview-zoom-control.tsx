@@ -17,7 +17,7 @@ interface PreviewZoomControlProps {
 export const PreviewZoomControl = React.memo(
   ({ value, onValueChange }: PreviewZoomControlProps) => {
     return (
-      <div className="bg-muted/50 dark:bg-muted/50 rounded-md transition-opacity border-1 border-muted shadow-sm backdrop-blur-xs absolute bottom-8 left-4 md:left-4 md:translate-x-0 z-30 flex-shrink-0 p-2">
+      <div className="bg-muted/80 dark:bg-muted/80 rounded-md transition-opacity border-1 border-muted shadow-sm backdrop-blur-xs absolute bottom-8 left-4 md:left-4 md:translate-x-0 z-30 flex-shrink-0 p-2">
         <div className="flex items-center gap-2 justify-center">
           <div className="flex items-center gap-2 w-36 sm:w-48">
             <TooltipProvider>

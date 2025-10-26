@@ -106,6 +106,9 @@ export const useAppLogic = () => {
       pageMargin: 0,
       gap: 0,
       orientation: "portrait",
+      itemWidth: 0,
+      itemHeight: 0,
+      layoutMode: "grid",
     },
   };
 
@@ -528,22 +531,56 @@ export const useAppLogic = () => {
     (key: keyof Omit<LayoutConfig, "itemScale">, value: number | string) => {
       commitStateChange((current) => {
         const newLayout = { ...current.layout, [key]: value };
+
+        if (key === "cols" || key === "rows") {
+          newLayout.layoutMode = "grid";
+        } else if (key === "itemWidth" || key === "itemHeight") {
+          if (Number(value) > 0) {
+            newLayout.layoutMode = "dimensions";
+          }
+        }
+
+        if (newLayout.layoutMode === "dimensions") {
+          const pageWidth = newLayout.orientation === "portrait" ? 210 : 297;
+          const pageHeight = newLayout.orientation === "portrait" ? 297 : 210;
+
+          const availableWidth =
+            pageWidth -
+            2 * newLayout.pageMargin -
+            (newLayout.cols - 1) * newLayout.gap;
+          const availableHeight =
+            pageHeight -
+            2 * newLayout.pageMargin -
+            (newLayout.rows - 1) * newLayout.gap;
+
+          if (newLayout.itemWidth && newLayout.itemWidth > 0) {
+            const itemWidthMM = newLayout.itemWidth * 10;
+            newLayout.cols = Math.floor(
+              (availableWidth + newLayout.gap) / (itemWidthMM + newLayout.gap)
+            );
+          }
+          if (newLayout.itemHeight && newLayout.itemHeight > 0) {
+            const itemHeightMM = newLayout.itemHeight * 10;
+            newLayout.rows = Math.floor(
+              (availableHeight + newLayout.gap) / (itemHeightMM + newLayout.gap)
+            );
+          }
+        }
+
         const { cols, rows } = newLayout;
-        const newCapacity = Number(cols) * Number(rows);
+        const newCapacity = Math.max(1, Number(cols) * Number(rows));
 
         const allCurrentItems = current.pages.flatMap((p) => p.items);
         if (allCurrentItems.length === 0)
           return { ...current, layout: newLayout };
 
         const newPages: Page[] = [];
-        let currentPage: Page | null = null;
-        allCurrentItems.forEach((item, index) => {
-          if (!currentPage || currentPage.items.length >= newCapacity) {
-            currentPage = { id: `page-${Date.now()}-${index}`, items: [] };
-            newPages.push(currentPage);
-          }
-          currentPage.items.push(item);
-        });
+        for (let i = 0; i < allCurrentItems.length; i += newCapacity) {
+          const pageItems = allCurrentItems.slice(i, i + newCapacity);
+          const pageId =
+            current.pages[newPages.length]?.id || `page-${Date.now()}-${i}`;
+          newPages.push({ id: pageId, items: pageItems });
+        }
 
         return {
           layout: newLayout,
@@ -632,6 +669,18 @@ export const useAppLogic = () => {
 
     let iframe: HTMLIFrameElement | null = null;
     try {
+      const isDimensionMode = layout.layoutMode === "dimensions";
+
+      const gridTemplateColumnsStyle =
+        isDimensionMode && layout.itemWidth && layout.itemWidth > 0
+          ? `repeat(${layout.cols}, ${layout.itemWidth}cm)`
+          : `repeat(${layout.cols}, 1fr)`;
+
+      const gridTemplateRowsStyle =
+        isDimensionMode && layout.itemHeight && layout.itemHeight > 0
+          ? `repeat(${layout.rows}, ${layout.itemHeight}cm)`
+          : `repeat(${layout.rows}, 1fr)`;
+
       const printCSS = `
         <style>
           @page {
@@ -654,26 +703,24 @@ export const useAppLogic = () => {
           }
           .pdf-page-grid {
             display: grid !important;
-            grid-template-columns: repeat(${layout.cols}, 1fr) !important;
-            grid-template-rows: repeat(${layout.rows}, 1fr) !important;
+            grid-template-columns: ${gridTemplateColumnsStyle} !important;
+            grid-template-rows: ${gridTemplateRowsStyle} !important;
             gap: ${layout.gap}mm !important;
             padding: ${layout.pageMargin}mm !important;
             box-sizing: border-box !important;
             background: white !important;
             width: 100%;
             height: 100%;
+            justify-content: center;
+            align-content: start;
           }
           .pdf-grid-item, .pdf-grid-item-empty {
             box-sizing: border-box;
             overflow: hidden;
             position: relative;
-            /* ADICIONADO: Define o container da célula como flex para alinhar seu conteúdo */
             display: flex;
             justify-content: center;
           }
-          
-          /* A regra ".pdf-grid-item img" que causava o conflito foi REMOVIDA. */
-
           .ProseMirror {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             padding: 8px; box-sizing: border-box; overflow: hidden;

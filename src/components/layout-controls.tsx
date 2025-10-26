@@ -11,7 +11,14 @@ import {
 import { Slider } from "@/components/ui/slider";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Settings, FilePlus, Trash2, BrushCleaning } from "lucide-react";
+import {
+  Settings,
+  FilePlus,
+  Trash2,
+  BrushCleaning,
+  Grid2X2,
+  RulerDimensionLine,
+} from "lucide-react";
 import type { LayoutConfig, PageOrientation } from "@/types";
 import {
   AlertDialog,
@@ -24,6 +31,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "./ui/alert-dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface LayoutControlsProps {
   layout: LayoutConfig;
@@ -52,6 +60,10 @@ export const LayoutControls = React.memo(
   }: LayoutControlsProps) => {
     const [colsInputValue, setColsInputValue] = useState(String(layout.cols));
     const [rowsInputValue, setRowsInputValue] = useState(String(layout.rows));
+    const [itemWidth, setItemWidth] = useState(String(layout.itemWidth || ""));
+    const [itemHeight, setItemHeight] = useState(
+      String(layout.itemHeight || "")
+    );
 
     useEffect(() => {
       setColsInputValue(String(layout.cols));
@@ -61,43 +73,47 @@ export const LayoutControls = React.memo(
       setRowsInputValue(String(layout.rows));
     }, [layout.rows]);
 
+    useEffect(() => {
+      setItemWidth(String(layout.itemWidth || ""));
+    }, [layout.itemWidth]);
+
+    useEffect(() => {
+      setItemHeight(String(layout.itemHeight || ""));
+    }, [layout.itemHeight]);
+
     const handleColsChange = (e: React.ChangeEvent<HTMLInputElement>) => {
       const value = e.target.value;
       setColsInputValue(value);
-
       const numValue = parseInt(value, 10);
       if (!isNaN(numValue) && numValue >= 1) {
         onLayoutChange("cols", numValue);
       }
     };
 
-    const handleColsBlur = () => {
-      if (
-        colsInputValue === "" ||
-        isNaN(parseInt(colsInputValue, 10)) ||
-        parseInt(colsInputValue, 10) < 1
-      ) {
-        setColsInputValue(String(layout.cols));
-      }
-    };
-
     const handleRowsChange = (e: React.ChangeEvent<HTMLInputElement>) => {
       const value = e.target.value;
       setRowsInputValue(value);
-
       const numValue = parseInt(value, 10);
       if (!isNaN(numValue) && numValue >= 1) {
         onLayoutChange("rows", numValue);
       }
     };
 
-    const handleRowsBlur = () => {
-      if (
-        rowsInputValue === "" ||
-        isNaN(parseInt(rowsInputValue, 10)) ||
-        parseInt(rowsInputValue, 10) < 1
-      ) {
-        setRowsInputValue(String(layout.rows));
+    const handleItemWidthChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+      const value = e.target.value;
+      setItemWidth(value);
+      const numValue = parseFloat(value);
+      if (!isNaN(numValue) && numValue > 0) {
+        onLayoutChange("itemWidth", numValue);
+      }
+    };
+
+    const handleItemHeightChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+      const value = e.target.value;
+      setItemHeight(value);
+      const numValue = parseFloat(value);
+      if (!isNaN(numValue) && numValue > 0) {
+        onLayoutChange("itemHeight", numValue);
       }
     };
 
@@ -128,37 +144,79 @@ export const LayoutControls = React.memo(
             </Select>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="cols-input">Colunas</Label>
-              <Input
-                id="cols-input"
-                type="number"
-                value={colsInputValue}
-                onChange={handleColsChange}
-                onBlur={handleColsBlur}
-                min={1}
-                className="w-full [&::-webkit-inner-spin-button]:appearance-none"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="rows-input">Linhas</Label>
-              <Input
-                id="rows-input"
-                type="number"
-                value={rowsInputValue}
-                onChange={handleRowsChange}
-                onBlur={handleRowsBlur}
-                min={1}
-                className="w-full [&::-webkit-inner-spin-button]:appearance-none"
-              />
-            </div>
-          </div>
+          <Tabs
+            defaultValue="grid"
+            className="w-full"
+            value={layout.layoutMode}
+            onValueChange={(value) => onLayoutChange("layoutMode", value)}
+          >
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="grid">
+                <Grid2X2 className="mr-2 h-4 w-4" /> Grade
+              </TabsTrigger>
+              <TabsTrigger value="dimensions">
+                <RulerDimensionLine className="mr-2 h-4 w-4" /> Dimensões
+              </TabsTrigger>
+            </TabsList>
+            <TabsContent value="grid">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
+                <div className="space-y-2">
+                  <Label htmlFor="cols-input">Colunas</Label>
+                  <Input
+                    id="cols-input"
+                    type="number"
+                    value={colsInputValue}
+                    onChange={handleColsChange}
+                    min={1}
+                    className="w-full [&::-webkit-inner-spin-button]:appearance-none"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="rows-input">Linhas</Label>
+                  <Input
+                    id="rows-input"
+                    type="number"
+                    value={rowsInputValue}
+                    onChange={handleRowsChange}
+                    min={1}
+                    className="w-full [&::-webkit-inner-spin-button]:appearance-none"
+                  />
+                </div>
+              </div>
+            </TabsContent>
+            <TabsContent value="dimensions">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
+                <div className="space-y-2">
+                  <Label htmlFor="width-input">Largura (cm)</Label>
+                  <Input
+                    id="width-input"
+                    type="number"
+                    value={itemWidth}
+                    onChange={handleItemWidthChange}
+                    min={0.1}
+                    step={0.1}
+                    className="w-full [&::-webkit-inner-spin-button]:appearance-none"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="height-input">Altura (cm)</Label>
+                  <Input
+                    id="height-input"
+                    type="number"
+                    value={itemHeight}
+                    onChange={handleItemHeightChange}
+                    min={0.1}
+                    step={0.1}
+                    className="w-full [&::-webkit-inner-spin-button]:appearance-none"
+                  />
+                </div>
+              </div>
+            </TabsContent>
+          </Tabs>
 
           <div className="space-y-2">
             <Label>Margem da Página ({layout.pageMargin}mm)</Label>
             <Slider
-              defaultValue={[0]}
               value={[layout.pageMargin]}
               onValueChange={(value) => onLayoutChange("pageMargin", value[0])}
               min={0}
@@ -169,7 +227,6 @@ export const LayoutControls = React.memo(
           <div className="space-y-2">
             <Label>Espaçamento ({layout.gap}mm)</Label>
             <Slider
-              defaultValue={[0]}
               value={[layout.gap]}
               onValueChange={(value) => onLayoutChange("gap", value[0])}
               min={0}

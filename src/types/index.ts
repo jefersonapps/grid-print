@@ -31,6 +31,9 @@ export interface LayoutConfig {
   pageMargin: number;
   gap: number;
   orientation: PageOrientation;
+  itemWidth: number;
+  itemHeight: number;
+  layoutMode: "grid" | "dimensions";
 }
 
 export type EditorInstancesRef = React.MutableRefObject<Record<string, Editor>>;

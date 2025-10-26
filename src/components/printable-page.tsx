@@ -25,7 +25,7 @@ interface PrintablePageProps {
 const Placeholder = ({ id }: { id: string }) => (
   <div
     key={id}
-    className="border border-dashed border-gray-300/50 dark:border-border/50 rounded-md"
+    className="rounded-md ring-1 ring-inset ring-dashed ring-gray-300/50 dark:ring-border/50"
   />
 );
 
@@ -66,6 +66,18 @@ export const PrintablePage = ({
 
   const sortableIds = gridCells.map((cell) => cell.id);
 
+  const isDimensionMode = layout.layoutMode === "dimensions";
+
+  const gridTemplateColumnsStyle =
+    isDimensionMode && layout.itemWidth && layout.itemWidth > 0
+      ? `repeat(${layout.cols}, calc(${layout.itemWidth}cm * ${zoom}))`
+      : `repeat(${layout.cols}, 1fr)`;
+
+  const gridTemplateRowsStyle =
+    isDimensionMode && layout.itemHeight && layout.itemHeight > 0
+      ? `repeat(${layout.rows}, calc(${layout.itemHeight}cm * ${zoom}))`
+      : `repeat(${layout.rows}, 1fr)`;
+
   return (
     <div
       className={cn(
@@ -75,65 +87,57 @@ export const PrintablePage = ({
       onClick={onSelect}
     >
       <div
-        className="flex-shrink-0"
+        className="flex-shrink-0 bg-white shadow-lg"
         style={{
           width: `calc(${pageWidth} * ${zoom})`,
           height: `calc(${pageHeight} * ${zoom})`,
+          display: "grid",
+
+          gridTemplateColumns: gridTemplateColumnsStyle,
+          gridTemplateRows: gridTemplateRowsStyle,
+          gap: `calc(${layout.gap}mm * ${zoom})`,
+          padding: `calc(${layout.pageMargin}mm * ${zoom})`,
+          boxSizing: "border-box",
           transition: `width ${transitionDuration} ${transitionTimingFunction}, height ${transitionDuration} ${transitionTimingFunction}`,
+          justifyContent: "center",
+          alignContent: "start",
         }}
       >
-        <div
-          className="bg-white shadow-lg"
-          style={{
-            width: pageWidth,
-            height: pageHeight,
-            transform: `scale(${zoom})`,
-            transformOrigin: "top left",
-            display: "grid",
-            gridTemplateColumns: `repeat(${layout.cols}, 1fr)`,
-            gridTemplateRows: `repeat(${layout.rows}, 1fr)`,
-            gap: `${layout.gap}mm`,
-            padding: `${layout.pageMargin}mm`,
-            boxSizing: "border-box",
-            transition: `transform ${transitionDuration} ${transitionTimingFunction}`,
-          }}
-        >
-          <SortableContext items={sortableIds} strategy={rectSwappingStrategy}>
-            {gridCells.map((cell) => {
-              if (cell.type === "placeholder") {
-                return <Placeholder key={cell.id} id={cell.id} />;
-              }
+        <SortableContext items={sortableIds} strategy={rectSwappingStrategy}>
+          {gridCells.map((cell) => {
+            if (cell.type === "placeholder") {
+              return <Placeholder key={cell.id} id={cell.id} />;
+            }
 
-              const item = cell as GridItem;
-              const isGhost = item.id === activeDragItemId;
+            const item = cell as GridItem;
+            const isGhost = item.id === activeDragItemId;
 
-              return (
-                <div
-                  key={item.id}
-                  className="relative flex items-center justify-center"
-                  style={{
-                    opacity: isGhost ? 0 : 1,
-                    overflow: "hidden",
-                  }}
-                >
-                  <SortableItem
-                    item={item}
-                    editor={
-                      item.type === "text"
-                        ? editorInstances.current[item.id]
-                        : null
-                    }
-                    onSelect={onItemSelect}
-                    isSelected={item.id === selectedItemId}
-                    onRemove={onItemRemove}
-                    onReplace={onItemReplace}
-                    onDuplicate={onItemDuplicate}
-                  />
-                </div>
-              );
-            })}
-          </SortableContext>
-        </div>
+            return (
+              <div
+                key={item.id}
+                className="relative flex items-center justify-center"
+                style={{
+                  opacity: isGhost ? 0 : 1,
+                  overflow: "hidden",
+                }}
+              >
+                <SortableItem
+                  item={item}
+                  editor={
+                    item.type === "text"
+                      ? editorInstances.current[item.id]
+                      : null
+                  }
+                  onSelect={onItemSelect}
+                  isSelected={item.id === selectedItemId}
+                  onRemove={onItemRemove}
+                  onReplace={onItemReplace}
+                  onDuplicate={onItemDuplicate}
+                />
+              </div>
+            );
+          })}
+        </SortableContext>
       </div>
     </div>
   );

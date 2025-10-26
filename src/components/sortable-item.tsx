@@ -84,6 +84,22 @@ export const SortableItem = React.memo(
       </ContextMenuContent>
     );
 
+    const RingOverlay = ({
+      borderRadius,
+    }: {
+      borderRadius: string | number;
+    }) => (
+      <div
+        style={{ borderRadius }}
+        className={cn(
+          "absolute inset-0 pointer-events-none",
+          showAsActive
+            ? "ring-2 ring-inset ring-primary"
+            : "group-hover:ring-1 group-hover:ring-inset group-hover:ring-gray-300 dark:group-hover:ring-border"
+        )}
+      />
+    );
+
     if (item.type === "text") {
       const wrapperStyle = {
         ...dndStyle,
@@ -110,7 +126,6 @@ export const SortableItem = React.memo(
               {...attributes}
               className={cn("group", showAsActive && "z-10")}
             >
-              {/* Manter apenas o botão de arrastar */}
               <div className="absolute top-1 right-1 z-20 opacity-0 group-hover:opacity-100 transition-opacity">
                 <Button
                   variant="secondary"
@@ -122,13 +137,7 @@ export const SortableItem = React.memo(
                 </Button>
               </div>
 
-              <div
-                style={contentContainerStyle}
-                className={cn(
-                  "border border-dashed border-gray-300 dark:border-border",
-                  showAsActive && "ring-2 ring-inset ring-primary"
-                )}
-              >
+              <div style={contentContainerStyle}>
                 {htmlContent ? (
                   <div
                     className="ProseMirror absolute inset-0 overflow-y-auto"
@@ -148,6 +157,8 @@ export const SortableItem = React.memo(
                   </div>
                 )}
               </div>
+
+              <RingOverlay borderRadius="2px" />
             </div>
           </ContextMenuTrigger>
           {menuContent}
@@ -190,14 +201,8 @@ export const SortableItem = React.memo(
               e.stopPropagation();
               onSelect(item.id);
             }}
-            className={cn(
-              "relative group h-full min-h-0",
-              "border border-dashed border-gray-300 dark:border-border",
-              "cursor-pointer",
-              showAsActive && "ring-2 ring-inset ring-primary"
-            )}
+            className={cn("relative group h-full min-h-0 cursor-pointer")}
           >
-            {/* Manter apenas o botão de arrastar */}
             <div className="absolute top-1 right-1 z-20 opacity-0 group-hover:opacity-100 transition-opacity">
               <Button
                 variant="secondary"
@@ -212,8 +217,10 @@ export const SortableItem = React.memo(
               src={item.content}
               alt={item.name}
               style={imageStyle}
-              className="pointer-events-none"
+              className="pointer-events-none select-none"
             />
+
+            <RingOverlay borderRadius={`${item.style.borderRadius || 2}px`} />
           </div>
         </ContextMenuTrigger>
         {menuContent}
